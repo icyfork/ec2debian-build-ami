@@ -1,0 +1,399 @@
+#!/bin/bash
+#
+# ec2ubuntu-build-ami
+#
+# This script builds, bundles, and uploads an Ubuntu base install AMI
+# for Amazon EC2.  This can be run on Fedora Core 4/6 AMI such as
+# ami-20b65349 (32-bit) or ami-36ff1a5f (64-bit)
+#
+# For Amazon EC2 AMIs built using this script see:
+#
+#   http://ec2gutsy.notlong.com
+#   http://ec2gutsy64.notlong.com
+#   http://ec2feisty.notlong.com
+#
+# For updated versions of this script see:
+#
+#   http://code.google.com/p/ec2ubuntu/
+#
+# For general Ubuntu on EC2 support see:
+#
+#   http://groups.google.com/group/ec2ubuntu
+#
+# This script expects to be run in the following environment:
+#
+#   Certificate file: /mnt/cert-*.pem
+#   Private Key file: /mnt/pk-*.pem
+#
+#   Fill these in:
+#     export AWS_USER_ID=
+#     export AWS_ACCESS_KEY_ID=
+#     export AWS_SECRET_ACCESS_KEY=
+#     export bucket=
+#
+#   Optional:
+#     export release=7.10   # one of:   6.06   6.10  7.04   7.10  8.04(?)
+#     export codename=gutsy # matching: dapper edgy  feisty gutsy hardy(?)
+#     export prefix=ubuntu-$release-$codename-base-$(date +%Y%m%d)
+#     export timezone=US/Pacific
+#
+# History:
+#
+#   2008-03-13 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to latest AMI tools 1.3-20041 20071010 (obviates several patches)
+#   - Add new Ubuntu patches for new version of AMI tools
+#   - Switch from "uname -i" to "uname -m" to enable building on Ubuntu 64-bit
+#   - Merge Dapper, Edgy, Feisty, Gutsy, Hardy scripts (Hardy doesn't work yet)
+#
+#   2008-03-13 Eric Hammond <ehammond@thinksome.com>
+#   - Prevent apt-get from running newly installed daemons
+#
+#   2008-03-09 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to kernel modules 2.6.16.60
+#   - Upgrade fuse kernel module to 2.7.3
+#   - Upgrade to latest AMI tools 1.3-19365 (obviates one patch)
+#
+#   2008-02-05 Eric Hammond <ehammond@thinksome.com>
+#   - Patch AMI tools to work with new Ruby 1.8.6
+#
+#   2008-02-03 Eric Hammond <ehammond@thinksome.com>
+#   - Install rsync without lutimes support (as it's not in the EC2 kernel)
+#
+#   2008-01-17 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to debootstrap 1.0.8
+#
+#   2007-12-25 Eric Hammond <ehammond@thinksome.com>
+#   - Install fuse kernel module (32-bit)
+#   - Upgrade to debootstrap 1.0.7
+#
+#   2007-12-02 Eric Hammond <ehammond@thinksome.com>
+#   - Use architecture "amd64" instead of "i386" for debootstrap on 64-bit
+#   - Add ia32-libs compatability package for 64-bit
+#
+#   2007-12-01 Eric Hammond <ehammond@thinksome.com>
+#   - Add support for building on 64-bit kernel (large, extra large instances)
+#
+#   2007-11-23 Eric Hammond <ehammond@thinksome.com>
+#   - ssh credentials retrieved from instance parameters or ephemeral storage.
+#   - Patch ec2-unbundle to work on Ubuntu
+#   - Also add locale to /etc/default/locale
+#
+#   2007-11-22 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade Ubuntu AMI tools patch to match new AMI tools source.
+#   - Install ca-certificates to better support ec2-upload-bundle per:
+#     http://developer.amazonwebservices.com/connect/thread.jspa?threadID=16543&tstart=0
+#   - ec2-bundle-vol excludes /etc/udev/rules.d/70-persistent-net.rules
+#     so that the network works on a rebundled instance, per:
+#   http://developer.amazonwebservices.com/connect/message.jspa?messageID=70873
+#
+#   2007-11-18 Eric Hammond <ehammond@thinksome.com>
+#   - Original put together based on code, tricks, and fixes from many
+#     others.
+#
+
+echo ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} >/dev/null
+
+echo Building Ubuntu ${release:=7.10} ${codename:=gutsy} base install AMI
+echo timezone: ${timezone:=US/Pacific}
+echo LANG:     ${LANG:=en_US.UTF-8}
+echo Uploading to ${bucket:?}/${prefix:=ubuntu-$release-$codename-base-$(date +%Y%m%d)}
+
+set -e
+set -x
+
+mkdir -p /mnt/build
+cd /mnt/build
+mkdir -p ubuntu
+
+if which apt-get >/dev/null 2>/dev/null; then
+  # Ubuntu / Debian
+  apt-get install -y binutils
+else
+  # Fedora Core / Red Hat / CentOS
+  yum install -y binutils
+fi
+
+if [ $(uname -m) = 'x86_64' ]; then
+  modules=http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.16.33-xenU-x86_64.tgz
+  bundlearch="x86_64"
+  bsarch="amd64"
+  nicksize=""
+else
+  # http://groups.google.com/group/ec2ubuntu/web/compiling-kernel-modules-from-source-for-amazon-ec2
+  modules=http://level22-ec2.s3.amazonaws.com/ec2-kernel-modules-2.6.16.tgz
+  bundlearch="i386"
+  bsarch="i386"
+  nicksize="64"
+fi
+
+# Don't launch daemons on apt-get install
+mkdir -p ubuntu/usr/sbin/
+cat << EOF > ubuntu/usr/sbin/policy-rc.d
+#!/bin/sh
+exit 101
+EOF
+chmod 755 ubuntu/usr/sbin/policy-rc.d
+
+# Bootstrap Ubuntu
+BSURL=http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
+BSVER=debootstrap_1.0.8
+BSDIR=debootstrap
+export DEBOOTSTRAP_DIR=${BSDIR}
+curl -s ${BSURL}/${BSVER}.tar.gz |
+  tar xz
+curl -s $BSURL/${BSVER}_all.deb > /tmp/${BSVER}_all.deb
+ar p /tmp/${BSVER}_all.deb data.tar.gz |
+  tar xvzOf - ./usr/share/debootstrap/devices.tar.gz > $BSDIR/devices.tar.gz
+if [ "$codename" = "hardy" ]; then
+  ln -s gutsy ${BSDIR}/scripts/ubuntu/$codename
+fi
+ln -s ubuntu/$codename ${BSDIR}/scripts/$codename
+${BSDIR}/debootstrap --arch $bsarch --include=ubuntu-standard,openssh-server,rsync,ruby,openssl,curl,ca-certificates,patch,alien $codename ubuntu http://us.archive.ubuntu.com/ubuntu
+
+chroot ubuntu mount -t proc none /proc
+chroot ubuntu mkdir -p /dev/pts
+chroot ubuntu mount -t devpts none /dev/pts
+chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
+
+# Change these to your locale and timezone
+chroot ubuntu localedef -i en_US -c -f UTF-8 en_US.UTF-8
+echo $timezone >ubuntu/etc/timezone
+echo "LANG=\"$LANG\""  >ubuntu/etc/default/locale
+/bin/cp -f ubuntu/usr/share/zoneinfo/$timezone ubuntu/etc/localtime
+
+# Basic sources.list
+cat <<EOF >ubuntu/etc/apt/sources.list
+deb http://us.archive.ubuntu.com/ubuntu $codename main restricted universe multiverse
+deb-src http://us.archive.ubuntu.com/ubuntu $codename main restricted universe multiverse
+
+deb http://us.archive.ubuntu.com/ubuntu $codename-updates main restricted universe multiverse
+deb-src http://us.archive.ubuntu.com/ubuntu $codename-updates main restricted universe multiverse
+
+deb http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
+deb-src http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
+EOF
+
+# Update packages
+chroot ubuntu apt-get update
+
+if [ "$bundlearch" = "i386" ]; then
+  if [ "$codename" = "edgy"   -o \
+       "$codename" = "feisty" -o \
+       "$codename" = "gutsy" ]; then
+    chroot ubuntu apt-get install -y libc6-xen
+  fi
+else
+  chroot ubuntu apt-get install -y ia32-libs
+fi
+
+if [ "$codename" = "edgy" ]; then
+  ln -s /sbin/MAKEDEV ubuntu/dev/MAKEDEV
+fi
+
+# Upgrade packages
+chroot ubuntu apt-get -y upgrade
+
+# Stuff we need
+chroot ubuntu apt-get install -y libopenssl-ruby1.8
+
+# EC2 kernel modules
+curl -s $modules | tar xzC ubuntu
+chroot ubuntu depmod -a
+
+# Xen epects a single tty1
+/bin/rm -f ubuntu/etc/event.d/tty[2-6]
+
+# Security
+chroot ubuntu shadowconfig on
+chroot ubuntu passwd -l root
+
+# Basic networking
+cat <<'EOF' >ubuntu/etc/network/interfaces
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+EOF
+
+cat <<'EOF' >ubuntu/etc/hosts
+127.0.0.1 localhost.localdomain localhost
+
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+EOF
+
+cat <<'EOF' >>ubuntu/etc/ssh/sshd_config
+UseDNS no
+EOF
+
+# motd
+cat <<EOF >ubuntu/etc/rc.local
+#!/bin/sh -e
+# Create /tmp if missing (as it's nice to bundle without it).
+test -d /tmp || mkdir -m 01777 /tmp
+
+# Get ssh credentials from instance parameters or ephemeral storage.
+/usr/local/sbin/get-credentials.sh
+
+cat <<EOMOTD >>/etc/motd
+
+Amazon EC2 Ubuntu $release $codename base install AMI built by
+Eric Hammond <ehammond@thinksome.com>
+For more information: http://ec2$codename$nicksize.notlong.com
+
+EOMOTD
+
+exit 0
+EOF
+
+# get-credentials.sh
+cat <<'EOF' >ubuntu/usr/local/sbin/get-credentials.sh
+#!/bin/bash
+# Retrieve the ssh credentials and add to authorized_keys file.
+# Based on /usr/local/sbin/get-credentials.sh from ami-20b65349
+public_key_url=http://169.254.169.254/1.0/meta-data/public-keys/0/openssh-key
+public_key_file=/tmp/openssh_id.pub
+public_key_ephemeral=/mnt/openssh_id.pub
+authorized_keys=/root/.ssh/authorized_keys
+test -d /root/.ssh || mkdir -p -m 700 /root/.ssh
+curl --retry 5 --retry-delay 2 --silent --fail -o $public_key_file $public_key_url
+if [ $? -eq 0 -a -e $public_key_file ] ; then
+  if ! grep -q -f $public_key_file $authorized_keys
+  then
+    cat $public_key_file >> $authorized_keys
+    echo "New ssh key added to $authorized_keys from $public_key_url" |
+      logger -t "ec2"
+  fi
+  chmod 600 $authorized_keys
+  rm -f $public_key_file
+elif [ -e $public_key_ephemeral ] ; then
+  if ! grep -q -f $public_key_ephemeral $authorized_keys
+  then 
+    cat $public_key_ephemeral >> $authorized_keys
+    echo "New ssh key added to $authorized_keys from $public_key_ephemeral" |
+      logger -t "ec2"
+  fi
+  chmod 600 $authorized_keys
+  chmod 600 $public_key_ephemeral
+fi
+if [ -e /mnt/openssh_id.pub ] ; then
+ if ! grep -q -f /mnt/openssh_id.pub /root/.ssh/authorized_keys
+ then
+   cat /mnt/openssh_id.pub >> /root/.ssh/authorized_keys
+   echo "New key added to authorized keys file from ephemeral store"|logger -t "ec2"
+  fi
+  chmod 600 /root/.ssh/authorized_keys
+fi
+EOF
+chmod 755 ubuntu/usr/local/sbin/get-credentials.sh
+
+# Install and patch Amazon AMI tools
+curl -s http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools.noarch.rpm \
+  > ubuntu/tmp/ec2-ami-tools.noarch.rpm
+chroot ubuntu alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm
+
+ln -s /usr/lib/site_ruby/aes ubuntu/usr/local/lib/site_ruby/1.8/aes
+ln -s /usr/lib/site_ruby/ec2 ubuntu/usr/local/lib/site_ruby/1.8/ec2
+
+chroot ubuntu patch -d /usr/lib/site_ruby/aes/amiutil <<'EOF'
+--- /usr/lib/site_ruby/aes/amiutil/http.rb.orig	2008-04-02 22:27:01.000000000 -0400
++++ /usr/lib/site_ruby/aes/amiutil/http.rb	2008-04-02 22:28:05.000000000 -0400
+@@ -58,7 +58,7 @@
+     tf.close(false)
+     
+     begin
+-      cmd_line = "curl -f  #{curl_arguments} #{url} 2> #{tf.path} | tee #{path} | openssl sha1; exit ${PIPESTATUS[0]}"
++      cmd_line = "/bin/bash -c 'curl -f  #{curl_arguments} #{url} 2> #{tf.path} | tee #{path} | openssl sha1; exit ${PIPESTATUS[0]}'"
+       calculated_digest = IO.popen( cmd_line ) { |io| io.readline.chomp }
+       
+       unless $?.exitstatus == 0
+--- /usr/lib/site_ruby/aes/amiutil/bundlevol.rb.orig	2008-04-03 00:57:26.000000000 -0400
++++ /usr/lib/site_ruby/aes/amiutil/bundlevol.rb	2008-04-03 00:58:42.000000000 -0400
+@@ -148,6 +148,10 @@
+   if image_file.index( volume ) == 0
+     exclude << image_file
+   end
++
++  # UGLY HACK for Ubuntu: Don't save the MAC address as that prevents
++  # networking from working on rebundled AMIs
++  exclude << "/etc/udev/rules.d/70-persistent-net.rules"
+   
+   # If we are inheriting instance data but can't access it we want to fail early
+   if p.inherit && !AES::AmiUtils::InstanceData.new.instance_data_accessible
+EOF
+
+chroot ubuntu patch -d /usr/lib/site_ruby/ec2/platform/base <<'EOF'
+--- /usr/lib/site_ruby/ec2/platform/base/pipeline.rb.orig	2008-04-02 19:41:54.000000000 -0700
++++ /usr/lib/site_ruby/ec2/platform/base/pipeline.rb	2008-04-02 19:47:17.000000000 -0700
+@@ -105,7 +105,8 @@
+           @results = []
+           create_tempfiles
+           
+-          invocation = command
++          # UGLY HACK for Ubuntu: Assumes no single quotes (') in command.
++          invocation = "/bin/bash -c '" + command + "'"
+           
+           # Execute the pipeline invocation
+           STDERR.puts("Pipeline.execute: command = [#{invocation}]") if verbose
+EOF
+
+if [ "$codename" = "gutsy" ]; then
+  # Install a copy of rsync with no lutimes support, as the Amazon EC2
+  # kernel does not support this newer feature to change symlink timestamps.
+  curl -s -o ubuntu/tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb \
+    https://level22.s3.amazonaws.com/20080203-rsync-no-lutimes/rsync_2.6.9-5ubuntu1_$bsarch.deb
+  chroot ubuntu dpkg --install /tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb
+fi
+
+# Might as well have a current slocate database
+chroot ubuntu updatedb
+
+# cleanup
+if [ "$codename" != "dapper" ]; then
+  chroot ubuntu apt-get -y autoremove --purge alien patch
+fi
+chroot ubuntu apt-get clean
+rm -f  ubuntu/usr/sbin/policy-rc.d
+rm -rf ubuntu/tmp/* ubuntu/root/.bash_history
+
+# Bundle & upload to S3
+cp /mnt/{pk,cert}-*.pem ubuntu/tmp/
+
+size=4096
+if [ "$codename" = "dapper" ]; then
+  size=3072
+fi
+
+chroot ubuntu ec2-bundle-vol            \
+  -r $bundlearch                        \
+  -d /tmp                               \
+  -p $prefix                            \
+  -u $AWS_USER_ID                       \
+  -k /tmp/pk-*.pem                      \
+  -c /tmp/cert-*.pem                    \
+  -s $size                              \
+  -e /tmp
+
+ec2-upload-bundle                       \
+    -b $bucket                          \
+    -m ubuntu/tmp/$prefix.manifest.xml  \
+    -a $AWS_ACCESS_KEY_ID               \
+    -s $AWS_SECRET_ACCESS_KEY
+
+umount ubuntu/dev/pts
+umount ubuntu/proc
+
+set +x
+
+cat <<EOF
+
+Now you might want to run this command:
+  ec2-register $bucket/$prefix.manifest.xml
+
+EOF
