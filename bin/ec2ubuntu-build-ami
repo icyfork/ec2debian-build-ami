@@ -39,7 +39,7 @@
 #
 # History:
 #
-#   2008-03-13 Eric Hammond <ehammond@thinksome.com>
+#   2008-04-03 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade to latest AMI tools 1.3-20041 20071010 (obviates several patches)
 #   - Add new Ubuntu patches for new version of AMI tools
 #   - Switch from "uname -i" to "uname -m" to enable building on Ubuntu 64-bit
