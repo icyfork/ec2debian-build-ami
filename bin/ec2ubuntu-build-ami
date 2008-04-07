@@ -36,8 +36,12 @@
 #     export codename=gutsy # matching: dapper edgy  feisty gutsy hardy(?)
 #     export prefix=ubuntu-$release-$codename-base-$(date +%Y%m%d)
 #     export timezone=US/Pacific
+#     export desktop="nx" # Takes longer and makes AMI bigger
 #
 # History:
+#
+#   2008-04-05 Eric Hammond <ehammond@thinksome.com>
+#   - Add support for desktop build with NoMachine NX Free.
 #
 #   2008-04-03 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade to latest AMI tools 1.3-20041 20071010 (obviates several patches)
@@ -94,8 +98,8 @@
 echo ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} >/dev/null
 
 echo Building Ubuntu ${release:=7.10} ${codename:=gutsy} base install AMI
-echo timezone: ${timezone:=US/Pacific}
-echo LANG:     ${LANG:=en_US.UTF-8}
+echo timezone:  ${timezone:=US/Pacific}
+echo LANG:      ${LANG:=en_US.UTF-8}
 echo Uploading to ${bucket:?}/${prefix:=ubuntu-$release-$codename-base-$(date +%Y%m%d)}
 
 set -e
@@ -117,13 +121,17 @@ if [ $(uname -m) = 'x86_64' ]; then
   modules=http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.16.33-xenU-x86_64.tgz
   bundlearch="x86_64"
   bsarch="amd64"
-  nicksize=""
+  notlongext="64"
 else
   # http://groups.google.com/group/ec2ubuntu/web/compiling-kernel-modules-from-source-for-amazon-ec2
   modules=http://level22-ec2.s3.amazonaws.com/ec2-kernel-modules-2.6.16.tgz
   bundlearch="i386"
   bsarch="i386"
-  nicksize="64"
+  notlongext=""
+fi
+
+if [ "$desktop" = "nx" ]; then
+  notlongext="$notlongext-desktop"
 fi
 
 # Don't launch daemons on apt-get install
@@ -186,9 +194,7 @@ else
   chroot ubuntu apt-get install -y ia32-libs
 fi
 
-if [ "$codename" = "edgy" ]; then
-  ln -s /sbin/MAKEDEV ubuntu/dev/MAKEDEV
-fi
+ln -s /sbin/MAKEDEV ubuntu/dev/MAKEDEV
 
 # Upgrade packages
 chroot ubuntu apt-get -y upgrade
@@ -236,7 +242,8 @@ EOF
 cat <<EOF >ubuntu/etc/rc.local
 #!/bin/sh -e
 # Create /tmp if missing (as it's nice to bundle without it).
-test -d /tmp || mkdir -m 01777 /tmp
+test -d /tmp || mkdir /tmp
+chmod 01777 /tmp
 
 # Get ssh credentials from instance parameters or ephemeral storage.
 /usr/local/sbin/get-credentials.sh
@@ -245,7 +252,7 @@ cat <<EOMOTD >>/etc/motd
 
 Amazon EC2 Ubuntu $release $codename base install AMI built by
 Eric Hammond <ehammond@thinksome.com>
-For more information: http://ec2$codename$nicksize.notlong.com
+For more information: http://ec2$codename$notlongext.notlong.com
 
 EOMOTD
 
@@ -353,6 +360,22 @@ fi
 
 # Might as well have a current slocate database
 chroot ubuntu updatedb
+
+# Are we installing the desktop with NoMachine NX?
+if [ "$desktop" = "nx" ]; then
+  chroot ubuntu apt-get install -y ubuntu-desktop # 90 minutes
+
+  curl -o ubuntu/tmp/nxclient_3.1.0-6_i386.deb \
+    http://64.34.161.181/download/3.1.0/Linux/nxclient_3.1.0-6_i386.deb
+  curl -o ubuntu/tmp/nxnode_3.1.0-6_i386.deb \
+    http://64.34.161.181/download/3.1.0/Linux/nxnode_3.1.0-6_i386.deb
+  curl -o ubuntu/tmp/nxserver_3.1.0-5_i386.deb \
+    http://64.34.161.181/download/3.1.0/Linux/FE/nxserver_3.1.0-5_i386.deb
+
+  chroot ubuntu dpkg -i /tmp/nxclient_3.1.0-6_i386.deb
+  chroot ubuntu dpkg -i /tmp/nxnode_3.1.0-6_i386.deb
+  chroot ubuntu dpkg -i /tmp/nxserver_3.1.0-5_i386.deb
+fi
 
 # cleanup
 if [ "$codename" != "dapper" ]; then
