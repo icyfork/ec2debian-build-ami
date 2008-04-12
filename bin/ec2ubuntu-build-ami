@@ -40,6 +40,9 @@
 #
 # History:
 #
+#   2008-04-11 Eric Hammond <ehammond@thinksome.com>
+#   - Install kernel modules for both 2.6.16-xenU and 2.6.21.7-2.fc8xen
+#
 #   2008-04-05 Eric Hammond <ehammond@thinksome.com>
 #   - Add support for desktop build with NoMachine NX Free.
 #
@@ -124,7 +127,7 @@ if [ $(uname -m) = 'x86_64' ]; then
   notlongext="64"
 else
   # http://groups.google.com/group/ec2ubuntu/web/compiling-kernel-modules-from-source-for-amazon-ec2
-  modules=http://level22-ec2.s3.amazonaws.com/ec2-kernel-modules-2.6.16.tgz
+  modules="http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.16-xenU.tgz http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen.tar.gz"
   bundlearch="i386"
   bsarch="i386"
   notlongext=""
@@ -203,7 +206,9 @@ chroot ubuntu apt-get -y upgrade
 chroot ubuntu apt-get install -y libopenssl-ruby1.8
 
 # EC2 kernel modules
-curl -s $modules | tar xzC ubuntu
+for module in $modules; do
+  curl -s $module | tar xzC ubuntu
+done
 chroot ubuntu depmod -a
 
 # Xen epects a single tty1
