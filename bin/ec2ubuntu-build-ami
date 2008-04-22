@@ -42,8 +42,14 @@
 #     export prefix=ubuntu-$release-$codename-base-$(date +%Y%m%d)
 #     export timezone=US/Pacific
 #     export desktop="nx" # Takes longer and makes AMI bigger
+#     export size=4096 # Size in megabytes
+#     export script="ext_script" #call a user customization script
 #
 # History:
+#
+#   2008-04-22 vdesjardins
+#   - Add a variable to override the default size of the image created
+#   - Add a optional call to an external script before bundling the AMI
 #
 #   2008-04-19 Eric Hammond <ehammond@thinksome.com>
 #   - Support 2.6.21 kernel with 64-bit builds.
@@ -115,6 +121,12 @@ echo Building Ubuntu ${release:=7.10} ${codename:=gutsy} base install AMI
 echo timezone:  ${timezone:=US/Pacific}
 echo LANG:      ${LANG:=en_US.UTF-8}
 echo Uploading to ${bucket:?}/${prefix:=ubuntu-$release-$codename-base-$(date +%Y%m%d)}
+if [ "$codename" = "dapper" ]; then
+  echo ${size:=3072} >/dev/null
+else
+  echo ${size:=4096} >/dev/null
+fi
+echo Image size:  ${size}
 
 set -e
 set -x
@@ -404,6 +416,11 @@ if [ "$desktop" = "nx" ]; then
   chroot ubuntu dpkg -i /tmp/nxserver_3.1.0-5_i386.deb
 fi
 
+# user customization script
+if [ -f "$script" ]; then
+  /bin/bash "$script"
+fi
+
 # cleanup
 if [ "$codename" != "dapper" ]; then
   chroot ubuntu apt-get -y autoremove --purge alien patch
@@ -414,11 +431,6 @@ rm -rf ubuntu/tmp/* ubuntu/root/.bash_history
 
 # Bundle & upload to S3
 cp /mnt/{pk,cert}-*.pem ubuntu/tmp/
-
-size=4096
-if [ "$codename" = "dapper" ]; then
-  size=3072
-fi
 
 chroot ubuntu ec2-bundle-vol            \
   -r $bundlearch                        \
