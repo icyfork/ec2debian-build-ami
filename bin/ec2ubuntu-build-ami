@@ -41,9 +41,9 @@
 #     export codename=gutsy # matching: dapper edgy  feisty gutsy hardy(?)
 #     export prefix=ubuntu-$release-$codename-base-$(date +%Y%m%d)
 #     export timezone=US/Pacific
-#     export desktop="nx" # Takes longer and makes AMI bigger
-#     export size=4096 # Size in megabytes
-#     export script="ext_script" #call a user customization script
+#     export desktop="nx"   # Takes longer and makes AMI bigger
+#     export size=4096      # Size in megabytes
+#     export script=        # Path to external script to run before bundle
 #
 # History:
 #
@@ -398,6 +398,7 @@ if [ "$codename" = "gutsy" ]; then
 fi
 
 # Might as well have a current slocate database
+#TBD: This command doesn't appear to actually update the database.
 chroot ubuntu updatedb
 
 # Are we installing the desktop with NoMachine NX?
@@ -416,9 +417,13 @@ if [ "$desktop" = "nx" ]; then
   chroot ubuntu dpkg -i /tmp/nxserver_3.1.0-5_i386.deb
 fi
 
-# user customization script
+# Call external script if requested
 if [ -f "$script" ]; then
-  /bin/bash "$script"
+  if [ -e "$script" ]; then
+    "$script"
+  else
+    /bin/bash "$script"
+  fi
 fi
 
 # cleanup
