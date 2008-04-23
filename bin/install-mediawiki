@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# install-mediawiki
+#
+# See also:
+#   https://help.ubuntu.com/community/MediaWiki
+
+# Install packages.  Remember the MySQL root password.
+
+apt-get update
+apt-get install -y mediawiki imagemagick mediawiki-math mysql-server
+
+perl -pi.bak -e 's%^#(Alias /mediawiki /var/lib/mediawiki1.10)%$1%' \
+  /etc/apache2/conf.d/mediawiki1.10.conf
+
+# Install Apache SSL server using a companion script.
+
+$(dirname $0)/install-apache-ssl
+
+# Visit and configure
+
+host=$(curl http://169.254.169.254/2007-12-15/meta-data/public-hostname/)
+cat <<EOM
+
+Please visit:
+
+  https://$host/mediawiki/
+
+Fill out the required fields.
+Check [X] Use superuser account
+and fill in your MySQL root password.
+
+EOM
+
+# Continue
+
+# mv /var/lib/mediawiki1.10/config/LocalSettings.php /etc/mediawiki1.10/LocalSettings.php

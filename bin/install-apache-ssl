@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# install-apache-ssl
+#
+# See also:
+#   https://help.ubuntu.com/community/forum/server/apache2/SSL
+#
+
+# Apache SSL setup. Assumes Apache is already installed.
+
+apt-get install -y ssl-cert
+
+mkdir /etc/apache2/ssl
+make-ssl-cert /usr/share/ssl-cert/ssleay.cnf /etc/apache2/ssl/apache.pem
+a2enmod ssl
+  
+cp /etc/apache2/sites-available/default /etc/apache2/sites-available/ssl
+
+patch -d /etc/apache2/sites-available <<EOM
+diff -u /etc/apache2/sites-available/ssl.orig  /etc/apache2/sites-available/ssl
+--- /etc/apache2/sites-available/ssl.orig       2008-04-22 17:21:17.000000000 -0700
++++ /etc/apache2/sites-available/ssl    2008-04-22 17:22:12.000000000 -0700
+@@ -1,6 +1,9 @@
+-NameVirtualHost *
+-<VirtualHost *>
++NameVirtualHost *:443
++<VirtualHost *:443>
+        ServerAdmin webmaster@localhost
++
++       SSLEngine On
++       SSLCertificateFile /etc/apache2/ssl/apache.pem
+ 
+        DocumentRoot /var/www/
+        <Directory />
+diff -u /etc/apache2/sites-available/default.orig  /etc/apache2/sites-available/default
+--- /etc/apache2/sites-available/default.orig   2008-02-04 12:36:39.000000000 -0800
++++ /etc/apache2/sites-available/default        2008-04-22 17:23:38.000000000 -0700
+@@ -1,5 +1,5 @@
+-NameVirtualHost *
+-<VirtualHost *>
++NameVirtualHost *:80
++<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+ 
+        DocumentRoot /var/www/
+EOM
+
+a2ensite ssl
+
+/etc/init.d/apache2 restart
+
