@@ -13,7 +13,7 @@ set -x
 
 apt-get install -y ssl-cert
 
-mkdir -f /etc/apache2/ssl
+mkdir -p /etc/apache2/ssl
 make-ssl-cert /usr/share/ssl-cert/ssleay.cnf /etc/apache2/ssl/apache.pem
 a2enmod ssl
   
