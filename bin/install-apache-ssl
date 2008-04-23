@@ -13,7 +13,7 @@ set -x
 
 apt-get install -y ssl-cert
 
-mkdir /etc/apache2/ssl
+mkdir -f /etc/apache2/ssl
 make-ssl-cert /usr/share/ssl-cert/ssleay.cnf /etc/apache2/ssl/apache.pem
 a2enmod ssl
   
@@ -28,13 +28,13 @@ diff -u /etc/apache2/sites-available/ssl.orig  /etc/apache2/sites-available/ssl
 -<VirtualHost *>
 +NameVirtualHost *:443
 +<VirtualHost *:443>
-        ServerAdmin webmaster@localhost
+	ServerAdmin webmaster@localhost
 +
-+       SSLEngine On
-+       SSLCertificateFile /etc/apache2/ssl/apache.pem
++	SSLEngine On
++	SSLCertificateFile /etc/apache2/ssl/apache.pem
  
-        DocumentRoot /var/www/
-        <Directory />
+	DocumentRoot /var/www/
+	<Directory />
 diff -u /etc/apache2/sites-available/default.orig  /etc/apache2/sites-available/default
 --- /etc/apache2/sites-available/default.orig   2008-02-04 12:36:39.000000000 -0800
 +++ /etc/apache2/sites-available/default        2008-04-22 17:23:38.000000000 -0700
@@ -43,9 +43,9 @@ diff -u /etc/apache2/sites-available/default.orig  /etc/apache2/sites-available/
 -<VirtualHost *>
 +NameVirtualHost *:80
 +<VirtualHost *:80>
-        ServerAdmin webmaster@localhost
+	ServerAdmin webmaster@localhost
  
-        DocumentRoot /var/www/
+	DocumentRoot /var/www/
 EOM
 
 a2ensite ssl

@@ -10,7 +10,6 @@ set -x
 
 # Install packages.  Remember the MySQL root password.
 
-apt-get update
 apt-get install -y mediawiki imagemagick mediawiki-math mysql-server
 
 perl -pi.bak -e 's%^#(Alias /mediawiki /var/lib/mediawiki1.10)%$1%' \
