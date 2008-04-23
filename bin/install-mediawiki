@@ -21,6 +21,8 @@ $(dirname $0)/install-apache-ssl
 
 # Visit and configure
 
+set +x
+
 host=$(curl http://169.254.169.254/2007-12-15/meta-data/public-hostname/)
 cat <<EOM
 
@@ -28,12 +30,19 @@ Please visit:
 
   https://$host/mediawiki/
 
-Fill out the required fields.
-Check [X] Use superuser account
-and fill in your MySQL root password.
+Set up the wiki by filling out the required fields.
+Check "[X] Use superuser account" and fill in your MySQL root password.
 
 EOM
 
-# Continue
+while test ! -f /var/lib/mediawiki1.10/config/LocalSettings.php; do
+  echo -n "When you see "Installation successful!" press Enter:"
+  read
+done
 
-# mv /var/lib/mediawiki1.10/config/LocalSettings.php /etc/mediawiki1.10/LocalSettings.php
+set -x
+
+# Wrap up
+
+mv /var/lib/mediawiki1.10/config/LocalSettings.php /etc/mediawiki1.10/LocalSettings.php
+chmod 640 /etc/mediawiki1.10/LocalSettings.php
