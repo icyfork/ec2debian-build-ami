@@ -5,6 +5,9 @@
 # See also:
 #   https://help.ubuntu.com/community/MediaWiki
 
+set -e
+set -x
+
 # Install packages.  Remember the MySQL root password.
 
 apt-get update

@@ -6,6 +6,9 @@
 #   https://help.ubuntu.com/community/forum/server/apache2/SSL
 #
 
+set -e
+set -x
+
 # Apache SSL setup. Assumes Apache is already installed.
 
 apt-get install -y ssl-cert
