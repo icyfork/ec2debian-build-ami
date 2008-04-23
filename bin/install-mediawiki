@@ -12,8 +12,8 @@ set -x
 
 apt-get install -y mediawiki imagemagick mediawiki-math mysql-server
 
-perl -pi.bak -e 's%^#(Alias /mediawiki /var/lib/mediawiki1.10)%$1%' \
-  /etc/apache2/conf.d/mediawiki1.10.conf
+perl -pi.bak -e 's%^#(Alias /mediawiki /var/lib/mediawiki.*)%$1%' \
+  /etc/apache2/conf.d/mediawiki*.conf
 
 # Install Apache SSL server using a companion script.
 
@@ -35,7 +35,7 @@ Check "[X] Use superuser account" and fill in your MySQL root password.
 
 EOM
 
-while test ! -f /var/lib/mediawiki1.10/config/LocalSettings.php; do
+while test ! -f /var/lib/mediawiki*/config/LocalSettings.php; do
   echo -n "When you see 'Installation successful!' press Enter:"
   read
 done
@@ -44,8 +44,8 @@ set -x
 
 # Wrap up
 
-mv /var/lib/mediawiki1.10/config/LocalSettings.php /etc/mediawiki1.10/LocalSettings.php
-chmod 640 /etc/mediawiki1.10/LocalSettings.php
+mv /var/lib/mediawiki*/config/LocalSettings.php /etc/mediawiki*/
+chmod 640 /etc/mediawiki*/LocalSettings.php
 
 set +x
 
