@@ -36,7 +36,7 @@ Check "[X] Use superuser account" and fill in your MySQL root password.
 EOM
 
 while test ! -f /var/lib/mediawiki1.10/config/LocalSettings.php; do
-  echo -n "When you see "Installation successful!" press Enter:"
+  echo -n "When you see 'Installation successful!' press Enter:"
   read
 done
 
