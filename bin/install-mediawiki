@@ -46,3 +46,7 @@ set -x
 
 mv /var/lib/mediawiki1.10/config/LocalSettings.php /etc/mediawiki1.10/LocalSettings.php
 chmod 640 /etc/mediawiki1.10/LocalSettings.php
+
+set +x
+
+echo "MediaWiki installed:  http://$host/mediawiki/"
