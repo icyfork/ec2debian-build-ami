@@ -49,4 +49,4 @@ chmod 640 /etc/mediawiki*/LocalSettings.php
 
 set +x
 
-echo "MediaWiki installed:  http://$host/mediawiki/"
+echo "MediaWiki installed: http://$host/mediawiki/"
