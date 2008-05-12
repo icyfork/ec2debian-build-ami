@@ -47,6 +47,10 @@
 #
 # History:
 #
+#   2008-05-12 Thomas Shealy <thomas.shealy@gmail.com>
+#   - Support 64-bit desktop AMIs.
+#   - Upgrade to NX 3.2.
+#
 #   2008-04-29 Eric Hammond <ehammond@thinksome.com>
 #   - Support command line options with reasonable defaults.
 #   - Support building Ubuntu 8.04 Hardy Heron.
@@ -458,16 +462,26 @@ fi
 
 # Are we installing the desktop with NoMachine NX?
 if [ "$desktop" = "nx" ]; then
-  curl -o ubuntu/tmp/nxclient_3.1.0-6_i386.deb \
-    http://64.34.161.181/download/3.1.0/Linux/nxclient_3.1.0-6_i386.deb
-  curl -o ubuntu/tmp/nxnode_3.1.0-6_i386.deb \
-    http://64.34.161.181/download/3.1.0/Linux/nxnode_3.1.0-6_i386.deb
-  curl -o ubuntu/tmp/nxserver_3.1.0-5_i386.deb \
-    http://64.34.161.181/download/3.1.0/Linux/FE/nxserver_3.1.0-5_i386.deb
+	if [ "$bsarch" = "amd64" ]; then
+		nxclient_pkg="nxclient_3.2.0-9_x86_64.deb"
+		nxnode_pkg="nxnode_3.2.0-5_x86_64.deb"
+		nxserver_pkg="nxserver_3.2.0-7_x86_64.deb"
+	else
+		nxclient_pkg="nxclient_3.2.0-9_i386.deb"
+		nxnode_pkg="nxnode_3.2.0-5_i386.deb"
+		nxserver_pkg="nxserver_3.2.0-7_i386.deb"
+	fi
 
-  chroot ubuntu dpkg -i /tmp/nxclient_3.1.0-6_i386.deb
-  chroot ubuntu dpkg -i /tmp/nxnode_3.1.0-6_i386.deb
-  chroot ubuntu dpkg -i /tmp/nxserver_3.1.0-5_i386.deb
+  curl -o ubuntu/tmp/$nxclient_pkg \
+    http://64.34.161.181/download/3.2.0/Linux/$nxclient_pkg
+  curl -o ubuntu/tmp/$nxnode_pkg \
+    http://64.34.161.181/download/3.2.0/Linux/$nxnode_pkg
+  curl -o ubuntu/tmp/$nxserver_pkg \
+    http://64.34.161.181/download/3.2.0/Linux/FE/$nxserver_pkg
+
+  chroot ubuntu dpkg -i /tmp/$nxclient_pkg
+  chroot ubuntu dpkg -i /tmp/$nxnode_pkg
+  chroot ubuntu dpkg -i /tmp/$nxserver_pkg
 fi
 
 # Call external script if requested
