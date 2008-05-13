@@ -47,6 +47,9 @@
 #
 # History:
 #
+#   2008-05-13 Thomas Shealy <thomas.shealy@gmail.com>
+#   - Add --retry to ec2-upload-bundle.
+#
 #   2008-05-12 Thomas Shealy <thomas.shealy@gmail.com>
 #   - Support 64-bit desktop AMIs.
 #   - Upgrade to NX 3.2.
@@ -518,6 +521,7 @@ chroot ubuntu ec2-bundle-vol            \
   -e /tmp
 
 ec2-upload-bundle                       \
+  --retry                               \
   -b $bucket                            \
   -m ubuntu/tmp/$prefix.manifest.xml    \
   -a $AWS_ACCESS_KEY_ID                 \
