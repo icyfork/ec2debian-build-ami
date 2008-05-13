@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+# install-lamp-server
+#
+
+set -e
+set -x
+
+# Install packages.  Remember the MySQL root password.
+
+apt-get install -y lamp-server^
