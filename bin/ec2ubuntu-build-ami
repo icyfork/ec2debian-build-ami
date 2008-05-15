@@ -6,10 +6,10 @@
 # for Amazon EC2.  This can be run on any of the following Fedora Core
 # AMIs, depending on what type of new Ubuntu AMI you wish to create:
 #
-#   ami-f21aff9b - 32-bit, 2.6.21 kernel
-#   ami-f51aff9c - 64-bit, 2.6.21 kernel
-#   ami-20b65349 - 32-bit, 2.6.16 kernel
-#   ami-36ff1a5f - 64-bit, 2.6.16 kernel
+#   32-bit, 2.6.21 kernel: ami-f51aff9c
+#   32-bit, 2.6.16 kernel: ami-20b65349
+#   64-bit, 2.6.16 kernel: ami-36ff1a5f
+#   64-bit, 2.6.21 kernel: ami-f21aff9b
 #
 # Command line options:
 #
