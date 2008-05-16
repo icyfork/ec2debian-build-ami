@@ -300,7 +300,7 @@ for module in $modules; do
 done
 chroot ubuntu depmod -a
 
-# Xen epects a single tty1
+# Xen expects a single tty1
 /bin/rm -f ubuntu/etc/event.d/tty[2-6]
 
 # Security
