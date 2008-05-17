@@ -6,6 +6,11 @@
 set -e
 set -x
 
-# Install packages.  Remember the MySQL root password.
+# Skip prompt for the MySQL root password if nobody is there to answer.
+if ! tty -s; then
+  export DEBIAN_PRIORITY=critical
+  logger -t $0 "Please remember to set the MySQL root password!"
+fi
 
+# Install packages.  Remember the MySQL root password if prompted.
 apt-get install -y lamp-server^
