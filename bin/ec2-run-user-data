@@ -45,12 +45,12 @@ $curl -o $user_data_file $user_data_url 2>&1 | $logger
 if [ ! -e $user_data_file ]; then
   $logger "No user-data available"
 elif head -1 $user_data_file | egrep -v '^#!'; then
-  $logger "user-data does not start with #!"
+  $logger "Skipping user-data which does not begin with #!"
 else
-  echo "user-data has been run on this instance under $ami_id" > $been_run_file
+  echo "user-data has been run on this instance" > $been_run_file
   $logger "Running user-data"
   chmod +x $user_data_file
-  $user_data_file 2>&1 | logger -t "ec2 user-data"
+  $user_data_file 2>&1 | logger -t "user-data"
   $logger "user-data exit code: $?"
 fi
 rm -f $user_data_file
