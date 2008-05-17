@@ -2,49 +2,58 @@
 #
 # ec2-run-user-data - Run instance user-data if it looks like a script.
 #
-# Only runs on the first boot of an instance.  If you want the
-# user-data script to run again on the next boot, add this command in
-# the user-data script:
+# Only retrieves and runs the user-data script once per instance.  If
+# you want the user-data script to run again (e.g., on the next boot)
+# then add this command in the user-data script:
 #   rm -f /var/ec2/ec2-run-user-data.*
+#
+# History:
+#   2008-05-16 Eric Hammond <ehammond@thinksome.com>
+#   - Initial version based on code from Kim Scheibel, Jorge Oliveira
 #
 
 prog=$(basename $0)
 true ${prog:=ec2}
 logger="logger -t $prog"
-curl="curl --retry 10 --retry-delay 2 --silent --show-error --fail --verbose"
-instancedataurl=http://169.254.169.254/2008-02-01
+curl="curl --retry 3 --silent --show-error --fail"
+instance_data_url=http://169.254.169.254/2008-02-01
 
-# Exit if we have already run on this instance (previous boot).
+# Wait until networking is up on the EC2 instance.
+perl -MIO::Socket::INET -e '
+ until(new IO::Socket::INET("169.254.169.254:80")){print"Network...\n";sleep 1}
+' | $logger
+
+# Exit if we have already run on this instance (e.g., previous boot).
 $logger "Retrieving AMI id"
-amiidurl=$instancedataurl/meta-data/ami-id
-curlerrfile=/tmp/curlerr.$$
-amiid=$($curl $amiidurl 2>/$curlerrfile)
-$logger <$curlerrfile
-rm -f $curlerrfile
-$logger "AMI id: ${amiid:=unknown}"
-beenrunfile=/var/ec2/$prog.$amiid
-mkdir -p $(dirname $beenrunfile)
-if [ -f $beenrunfile ]; then
+ami_id_url=$instance_data_url/meta-data/ami-id
+curl_err_file=/tmp/curlerr.$$
+ami_id=$($curl $ami_id_url 2> $curl_err_file)
+$logger < $curl_err_file
+rm -f $curl_err_file
+$logger "AMI id: ${ami_id:=unknown}"
+been_run_file=/var/ec2/$prog.$ami_id
+mkdir -p $(dirname $been_run_file)
+if [ -f $been_run_file ]; then
   $logger "user-data has already been run run on this instance"
   exit
 fi
 
-# Retrieve the user-data
-userdataurl=$instancedataurl/user-data
-userdatafile=/tmp/$prog.$$
+# Retrieve the instance user-data
+user_data_url=$instance_data_url/user-data
+user_data_file=/tmp/$prog.$$
 $logger "Retrieving user-data"
-$curl -o $userdatafile $userdataurl 2>&1 | $logger
+$curl -o $user_data_file $user_data_url 2>&1 | $logger
 
 # Run the user-data if it looks like a script
-if [ ! -e $userdatafile ]; then
+if [ ! -e $user_data_file ]; then
   $logger "No user-data available"
-elif head -1 $user_data_script | egrep -v '^#!'; then
+elif head -1 $user_data_file | egrep -v '^#!'; then
   $logger "user-data does not start with #!"
 else
-  echo "user-data has been run on this instance under $amiid" >$beenrunfile
+  echo "user-data has been run on this instance under $ami_id" > $been_run_file
   $logger "Running user-data"
-  chmod +x $userdatafile
-  $userdatafile 2>&1 | $logger
+  chmod +x $user_data_file
+  $user_data_file 2>&1 | logger -t "ec2 user-data"
   $logger "user-data exit code: $?"
 fi
-rm -f $userdatafile
+rm -f $user_data_file
