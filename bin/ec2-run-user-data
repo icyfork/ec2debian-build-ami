@@ -26,10 +26,7 @@ perl -MIO::Socket::INET -e '
 # Exit if we have already run on this instance (e.g., previous boot).
 $logger "Retrieving AMI id"
 ami_id_url=$instance_data_url/meta-data/ami-id
-curl_err_file=/tmp/curlerr.$$
-ami_id=$($curl $ami_id_url 2> $curl_err_file)
-$logger < $curl_err_file
-rm -f $curl_err_file
+ami_id=$($curl $ami_id_url)
 $logger "AMI id: ${ami_id:=unknown}"
 been_run_file=/var/ec2/$prog.$ami_id
 mkdir -p $(dirname $been_run_file)
