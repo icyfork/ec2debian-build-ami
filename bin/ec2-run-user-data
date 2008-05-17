@@ -23,9 +23,7 @@ perl -MIO::Socket::INET -e '
 ' | $logger
 
 # Exit if we have already run on this instance (e.g., previous boot).
-$logger "Retrieving AMI id"
 ami_id=$($curl $instance_data_url/meta-data/ami-id)
-$logger "AMI id: ${ami_id:=unknown}"
 been_run_file=/var/ec2/$prog.$ami_id
 mkdir -p $(dirname $been_run_file)
 if [ -f $been_run_file ]; then
@@ -33,12 +31,10 @@ if [ -f $been_run_file ]; then
   exit
 fi
 
-# Retrieve the instance user-data
+# Retrieve the instance user-data and run it if it looks like a script
 user_data_file=$(tempfile --prefix ec2 --suffix .user-data --mode 700)
 $logger "Retrieving user-data"
 $curl -o $user_data_file $instance_data_url/user-data 2>&1 | $logger
-
-# Run the user-data if it looks like a script
 if [ ! -s $user_data_file ]; then
   $logger "No user-data available"
 elif head -1 $user_data_file | egrep -v '^#!'; then
