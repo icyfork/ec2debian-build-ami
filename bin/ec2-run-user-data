@@ -13,7 +13,6 @@
 #
 
 prog=$(basename $0)
-true ${prog:=ec2}
 logger="logger -t $prog"
 curl="curl --retry 3 --silent --show-error --fail"
 instance_data_url=http://169.254.169.254/2008-02-01
