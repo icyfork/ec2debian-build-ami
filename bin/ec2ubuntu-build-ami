@@ -381,8 +381,8 @@ public_key_ephemeral=/mnt/openssh_id.pub
 authorized_keys=/root/.ssh/authorized_keys
 test -d /root/.ssh || mkdir -p -m 700 /root/.ssh
 perl -MIO::Socket::INET -e '
- until(new IO::Socket::INET("169.254.169.254:80")){print"Network...\n";sleep 1}
-' | logger -k "ec2"
+ until(new IO::Socket::INET("169.254.169.254:80")){print"Waiting for network...\n";sleep 1}
+' | logger -t "ec2"
 curl --retry 3 --silent --fail -o $public_key_file $public_key_url
 if [ $? -eq 0 -a -e $public_key_file ] ; then
   if ! grep -s -q -f $public_key_file $authorized_keys
