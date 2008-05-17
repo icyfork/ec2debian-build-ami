@@ -9,7 +9,7 @@
 #
 # History:
 #   2008-05-16 Eric Hammond <ehammond@thinksome.com>
-#   - Initial version based on code from Kim Scheibel, Jorge Oliveira
+#   - Initial version including code from Kim Scheibel, Jorge Oliveira
 #
 
 prog=$(basename $0)
