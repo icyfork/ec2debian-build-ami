@@ -48,6 +48,9 @@
 #
 # History:
 #
+#   2008-05-21 Eric Hammond <ehammond@thinksome.com>
+#   - Add "kubuntu-desktop" to desktop builds so they have Gnome and KDE.
+#
 #   2008-05-20 Eric Hammond <ehammond@thinksome.com>
 #   - Add option to specify kernel modules.
 #
@@ -164,7 +167,7 @@ while [ $# -gt 0 ]; do
     --package)     packages="$packages $2";             shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
     --desktop)     desktop=$2
-                   packages="$packages ubuntu-desktop user-setup"
+                  packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
                                                         shift 2 ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
@@ -223,12 +226,10 @@ if [ $(uname -m) = 'x86_64' ]; then
   true ${modules:=http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.16.33-xenU-x86_64.tgz http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64.tar.gz}
   # Amazon's 2.6.21 modules are currently built with the wrong version string:
   # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
-  # Amazon's 2.6.16 modules are out of date and are missing fixes.
   bundlearch="x86_64"
   bsarch="amd64"
   export notlongext="64"
 else
-
   true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.16-xenU.tgz http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen.tar.gz}
   # Amazon's 2.6.21 modules are currently built with the wrong version string:
   # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
