@@ -50,6 +50,7 @@
 #
 #   2008-06-01 Eric Hammond <ehammond@thinksome.com>
 #   - Tweaks to allow running this script on Ubuntu 8.04 Hardy.
+#   - Trim 15MB off of the post-boot disk footprint.
 #
 #   2008-05-21 Eric Hammond <ehammond@thinksome.com>
 #   - Add "kubuntu-desktop" to desktop builds so they have Gnome and KDE.
@@ -313,7 +314,7 @@ if [ "$bundlearch" = "i386" ]; then
   fi
   if [ "$codename" = "hardy" ]; then
     # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
-    mv ubuntu/lib/tls ubuntu/lib/tls.disabled
+    rm -rf ubuntu/lib/tls
   fi
 else
   chroot ubuntu apt-get install -y ia32-libs
@@ -553,6 +554,7 @@ if [ "$codename" != "dapper" ]; then
 fi
 chroot ubuntu apt-get clean
 rm -f  ubuntu/usr/sbin/policy-rc.d
+rm -rf /var/log/{bootstrap,dpkg}.log /var/cache/apt/*.bin /var/lib/apt/lists/
 rm -rf ubuntu/tmp/* ubuntu/root/.bash_history
 
 # Bundle & upload to S3
