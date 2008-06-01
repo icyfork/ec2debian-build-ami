@@ -48,6 +48,9 @@
 #
 # History:
 #
+#   2008-06-01 Eric Hammond <ehammond@thinksome.com>
+#   - Tweaks to allow running this script on Ubuntu 8.04 Hardy.
+#
 #   2008-05-21 Eric Hammond <ehammond@thinksome.com>
 #   - Add "kubuntu-desktop" to desktop builds so they have Gnome and KDE.
 #
@@ -222,18 +225,21 @@ else
   yum install -y binutils
 fi
 
+# Amazon's kernel modules are mostly out of date, missing fixes, or
+# not built with the right version string. To build the modules
+# yourself, see:
+# http://groups.google.com/group/ec2ubuntu/web/compiling-kernel-modules-from-source-for-amazon-ec2
+# http://groups.google.com/group/ec2ubuntu/web/compiling-2-6-21-kernel-modules-from-source-for-amazon-ec2
+
 if [ $(uname -m) = 'x86_64' ]; then
   true ${modules:=http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.16.33-xenU-x86_64.tgz http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64.tar.gz}
-  # Amazon's 2.6.21 modules are currently built with the wrong version string:
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
+  # http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
   bundlearch="x86_64"
   bsarch="amd64"
   export notlongext="64"
 else
   true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.16-xenU.tgz http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen.tar.gz}
-  # Amazon's 2.6.21 modules are currently built with the wrong version string:
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
-  # Amazon's 2.6.16 modules are out of date and are missing fixes.
+  # http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
   bundlearch="i386"
   bsarch="i386"
   export notlongext=""
@@ -255,7 +261,7 @@ chmod 755 ubuntu/usr/sbin/policy-rc.d
 # Bootstrap Ubuntu
 BSURL=http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
 BSVER=debootstrap_1.0.8
-BSDIR=debootstrap
+BSDIR=$(pwd)/debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
   tar xz
 curl -s $BSURL/${BSVER}_all.deb > /tmp/${BSVER}_all.deb
@@ -266,13 +272,13 @@ if [ "$codename" = "hardy" ]; then
 fi
 ln -s ubuntu/$codename $BSDIR/scripts/$codename
 export DEBOOTSTRAP_DIR=$BSDIR
-perl -pi.bak -e 'print "set -x\n" if $.==2' $BSDIR/debootstrap
+#perl -pi.bak -e 'print "set -v -x\n" if $.==2' $BSDIR/debootstrap
 $BSDIR/debootstrap --arch $bsarch $codename ubuntu http://us.archive.ubuntu.com/ubuntu
 
 chroot ubuntu mount -t proc none /proc
 chroot ubuntu mkdir -p /dev/pts
 chroot ubuntu mount -t devpts none /dev/pts
-chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
+test -e /dev/ptmx || chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
 
 chroot ubuntu apt-get -f install -y
 
