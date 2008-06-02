@@ -51,6 +51,7 @@
 #   2008-06-01 Eric Hammond <ehammond@thinksome.com>
 #   - Tweaks to allow running this script on Ubuntu 8.04 Hardy.
 #   - Trim 15MB off of the post-boot disk footprint.
+#   - Increase default root partition size to 10GB (still 3GB for Dapper).
 #
 #   2008-05-21 Eric Hammond <ehammond@thinksome.com>
 #   - Add "kubuntu-desktop" to desktop builds so they have Gnome and KDE.
@@ -200,7 +201,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
 if [ "$codename" == "dapper" ]; then
   true ${size:=3072}
 else
-  true ${size:=4096}
+  true ${size:=10240}
 fi
 
 echo Building AMI for Ubuntu $release $codename
