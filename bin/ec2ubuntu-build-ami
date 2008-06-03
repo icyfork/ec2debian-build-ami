@@ -48,10 +48,14 @@
 #
 # History:
 #
+#   2008-06-02 Eric Hammond <ehammond@thinksome.com>
+#   - Change default timezone to UTC.
+#   - Increase default root partition size to 10GB (still 3GB for Dapper).
+#   - Upgrade to debootstrap 1.0.9
+#
 #   2008-06-01 Eric Hammond <ehammond@thinksome.com>
 #   - Tweaks to allow running this script on Ubuntu 8.04 Hardy.
 #   - Trim 15MB off of the post-boot disk footprint.
-#   - Increase default root partition size to 10GB (still 3GB for Dapper).
 #
 #   2008-05-21 Eric Hammond <ehammond@thinksome.com>
 #   - Add "kubuntu-desktop" to desktop builds so they have Gnome and KDE.
@@ -195,7 +199,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${bucket:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
-     ${timezone:=US/Pacific} ${LANG:=en_US.UTF-8} \
+     ${timezone:=UTC} ${LANG:=en_US.UTF-8} \
      ${tag:=custom} ${prefix:=ubuntu-$release-$codename-$tag-$(date +%Y%m%d)}
 
 if [ "$codename" == "dapper" ]; then
@@ -262,7 +266,7 @@ chmod 755 ubuntu/usr/sbin/policy-rc.d
 
 # Bootstrap Ubuntu
 BSURL=http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
-BSVER=debootstrap_1.0.8
+BSVER=debootstrap_1.0.9
 BSDIR=$(pwd)/debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
   tar xz
