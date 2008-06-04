@@ -26,11 +26,12 @@
 #    --lang LANG           - Defaults to en_US.UTF-8
 #    --size MB             - Root partition size in megabytes
 #    --package NAME        - Additional Ubuntu package to install
-#    --script FILE         - External script to run before bundle
+#    --script FILE         - External script/command to run before bundle
 #    --modules "URL1 URL2" - Kernel modules to download and install
 #    --desktop nx          - Takes longer and makes AMI much bigger
 #
 #    It is ok to specify multiple --package and --script options.
+#    It is ok to specify a quoted command for the --script option.
 #    You can also use "--desktop yes" to install the desktop packages
 #    without the NX software.
 #
@@ -47,6 +48,10 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2008-06-04 Eric Hammond <ehammond@thinksome.com>
+#   - Run --script file directly if it is executable, otherwise use /bin/bash
+#   - Option to --script can be a quoted command line.
 #
 #   2008-06-02 Eric Hammond <ehammond@thinksome.com>
 #   - Change default timezone to UTC.
@@ -172,7 +177,7 @@ while [ $# -gt 0 ]; do
     --timezone)    timezone=$2;                         shift 2 ;;
     --lang)        LANG=$2;                             shift 2 ;;
     --size)        size=$2;                             shift 2 ;;
-    --script)      scripts="$scripts $2";               shift 2 ;;
+    --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
     --desktop)     desktop=$2
@@ -542,14 +547,14 @@ if [ "$desktop" = "nx" ]; then
   chroot ubuntu dpkg -i /tmp/$nxserver_pkg
 fi
 
-# Call external script if requested
-for script in $scripts; do
-  if [ -f "$script" ]; then
-    if [ -e "$script" ]; then
-      "$script"
-    else
-      /bin/bash "$script"
-    fi
+# Invoke external scripts/commands if requested
+for script in "${scripts[@]}"; do
+  if [ -x "$script" ]; then
+    "$script"
+  elif [ -f "$script" ]; then
+    /bin/bash "$script"
+  else
+    eval $script
   fi
 done
 
