@@ -22,7 +22,7 @@
 #    --cert PATH           - Defaults to $EC2_CERT
 #    --release VERSION     - One of: 6.06 6.10 7.04 7.10 8.04
 #    --codename NAME       - Only needed if release not recognized.
-#    --timezone ZONE       - Defaults to US/Pacific
+#    --timezone ZONE       - Defaults to UTC
 #    --lang LANG           - Defaults to en_US.UTF-8
 #    --size MB             - Root partition size in megabytes
 #    --package NAME        - Additional Ubuntu package to install
