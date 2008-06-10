@@ -53,6 +53,7 @@
 #
 #   2008-06-10 Thomas Shealy <thomas.shealy@gmail.com>
 #   - Add --builddir option to support multiple concurrent AMI builds.
+#   - Make build parameters available in external scripts.
 #
 #   2008-06-09 Eric Hammond <ehammond@thinksome.com>
 #   - Prevent prompting for desktop packages w/ DEBIAN_FRONTEND=noninteractive
@@ -311,7 +312,7 @@ test -e /dev/ptmx || chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
 chroot ubuntu apt-get -f install -y
 
 # Set locale
-chroot ubuntu localedef -c --input=$locale --charmap=$charmap $locale.$charmap
+chroot ubuntu localedef -c --inputfile=$locale --charmap=$charmap $locale.$charmap
 echo "LANG=\"$LANG\""  >ubuntu/etc/default/locale
 
 # Set timezone
@@ -568,6 +569,11 @@ if [ "$desktop" = "nx" ]; then
   chroot ubuntu dpkg -i /tmp/$nxnode_pkg
   chroot ubuntu dpkg -i /tmp/$nxserver_pkg
 fi
+
+# Export build parameters so they are available in external scripts
+export release codename tag bucket prefix timezone locale charmap size \
+  scripts packages modules desktop builddir bundlearch AWS_USER_ID \
+  AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY EC2_PRIVATE_KEY EC2_CERT
 
 # Invoke external scripts/commands if requested
 for script in "${scripts[@]}"; do
