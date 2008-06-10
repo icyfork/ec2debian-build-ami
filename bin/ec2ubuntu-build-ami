@@ -229,8 +229,6 @@ echo timezone:     $timezone
 echo Image size:   ${size} MB
 echo Uploading to: $bucket/$prefix
 
-exit
-
 set -e
 set -x
 
@@ -400,7 +398,7 @@ EOF
 chmod 755 ubuntu/etc/init.d/ec2-killall-nash-hotplug
 ln -s ../init.d/ec2-killall-nash-hotplug ubuntu/etc/rcS.d/S00ec2-killall-nash-hotplug
 
-# motd
+# Startup steps
 cat <<EOF >ubuntu/etc/rc.local
 #!/bin/sh -e
 
