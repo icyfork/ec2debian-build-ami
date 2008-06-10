@@ -57,7 +57,7 @@
 #
 #   2008-06-09 Eric Hammond <ehammond@thinksome.com>
 #   - Prevent prompting for desktop packages w/ DEBIAN_FRONTEND=noninteractive
-#   - Use same revisions of ec2ubuntu-build-ami and ec2-run-user-data
+#   - Use fixed revision of ec2-run-user-data
 #   - Use fixed release of the Amazon EC2 AMI command line tools.
 #
 #   2008-06-04 Eric Hammond <ehammond@thinksome.com>
