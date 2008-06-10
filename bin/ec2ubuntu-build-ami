@@ -30,6 +30,7 @@
 #    --script FILE         - External script/command to run before bundle
 #    --modules "URL1 URL2" - Kernel modules to download and install
 #    --desktop nx          - Takes longer and makes AMI much bigger
+#    --builddir DIR        - Build directory [default: /mnt/build]
 #
 #    It is ok to specify multiple --package and --script options.
 #    It is ok to specify a quoted command for the --script option.
@@ -49,6 +50,9 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2008-06-10 Thomas Shealy <thomas.shealy@gmail.com>
+#   - Add --builddir option to support multiple concurrent AMI builds.
 #
 #   2008-06-09 Eric Hammond <ehammond@thinksome.com>
 #   - Prevent prompting for desktop packages w/ DEBIAN_FRONTEND=noninteractive
@@ -192,6 +196,7 @@ while [ $# -gt 0 ]; do
     --modules)     modules=$2;                          shift 2 ;;
     --desktop)     desktop=$2
                   packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
+    --builddir)    builddir=$2;                         shift 2 ;;
                                                         shift 2 ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
@@ -215,7 +220,8 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
-     ${tag:=custom} ${prefix:=ubuntu-$release-$codename-$tag-$(date +%Y%m%d)}
+     ${tag:=custom} ${prefix:=ubuntu-$release-$codename-$tag-$(date +%Y%m%d)} \
+     ${builddir:=/mnt/build}
 
 if [ "$codename" == "dapper" ]; then
   true ${size:=3072}
@@ -235,8 +241,8 @@ set -x
 
 # The good stuff starts here.
 
-mkdir -p /mnt/build
-cd /mnt/build
+mkdir -p $builddir
+cd $builddir
 mkdir -p ubuntu
 
 if which apt-get >/dev/null 2>/dev/null; then
