@@ -172,7 +172,6 @@
 #
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
-echo $0 v$VERSION
 
 packages="ubuntu-standard openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby1.8 patch alien"
 
@@ -419,7 +418,7 @@ EOF
 
 # Script to run user-data if it looks like a script
 curl -s -o ubuntu/usr/local/sbin/ec2-run-user-data \
-  http://ec2ubuntu.googlecode.com/svn-history/r$VERSION/trunk/bin/ec2-run-user-data
+  http://ec2ubuntu.googlecode.com/svn-history/r41/trunk/bin/ec2-run-user-data
 chmod 755 ubuntu/usr/local/sbin/ec2-run-user-data
 
 # ec2-get-credentials
