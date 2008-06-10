@@ -304,7 +304,7 @@ test -e /dev/ptmx || chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
 chroot ubuntu apt-get -f install -y
 
 # Set locale
-chroot ubuntu localedef -c -input=$locale --charmap=$charmap $locale.$charmap
+chroot ubuntu localedef -c --input=$locale --charmap=$charmap $locale.$charmap
 echo "LANG=\"$LANG\""  >ubuntu/etc/default/locale
 
 # Set timezone
@@ -451,7 +451,8 @@ EOF
 chmod 755 ubuntu/usr/local/sbin/ec2-get-credentials
 
 # Install and patch Amazon AMI tools
-curl -s http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools.noarch.rpm \
+curl -s \
+  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-20041.noarch.rpm \
   > ubuntu/tmp/ec2-ami-tools.noarch.rpm
 chroot ubuntu alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm
 
