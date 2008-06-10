@@ -23,7 +23,8 @@
 #    --release VERSION     - One of: 6.06 6.10 7.04 7.10 8.04
 #    --codename NAME       - Only needed if release not recognized.
 #    --timezone ZONE       - Defaults to UTC
-#    --lang LANG           - Defaults to en_US.UTF-8
+#    --locale LOCALE       - Defaults to en_US
+#    --charmap CHARMAP     - Defaults to UTF-8
 #    --size MB             - Root partition size in megabytes
 #    --package NAME        - Additional Ubuntu package to install
 #    --script FILE         - External script/command to run before bundle
@@ -50,7 +51,8 @@
 # History:
 #
 #   2008-06-09 Eric Hammond <ehammond@thinksome.com>
-#   - Prevent prompting for desktop packages with DEBIAN_FRONTEND=noninteractive
+#   - Prevent prompting for desktop packages w/ DEBIAN_FRONTEND=noninteractive
+#   - Use same revisions of ec2ubuntu-build-ami and ec2-run-user-data
 #
 #   2008-06-04 Eric Hammond <ehammond@thinksome.com>
 #   - Run --script file directly if it is executable, otherwise use /bin/bash
@@ -163,6 +165,9 @@
 #     others.
 #
 
+VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
+echo $0 v$VERSION
+
 packages="ubuntu-standard openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby1.8 patch alien"
 
 while [ $# -gt 0 ]; do
@@ -178,7 +183,8 @@ while [ $# -gt 0 ]; do
     --private-key) EC2_PRIVATE_KEY=$2;                  shift 2 ;;
     --cert)        EC2_CERT=$2;                         shift 2 ;;
     --timezone)    timezone=$2;                         shift 2 ;;
-    --lang)        LANG=$2;                             shift 2 ;;
+    --locale)      locale=$2;                           shift 2 ;;
+    --charmap)     charmap=$2;                          shift 2 ;;
     --size)        size=$2;                             shift 2 ;;
     --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
@@ -207,7 +213,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${bucket:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
-     ${timezone:=UTC} ${LANG:=en_US.UTF-8} \
+     ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
      ${tag:=custom} ${prefix:=ubuntu-$release-$codename-$tag-$(date +%Y%m%d)}
 
 if [ "$codename" == "dapper" ]; then
@@ -217,10 +223,13 @@ else
 fi
 
 echo Building AMI for Ubuntu $release $codename
+echo locale:       $locale
+echo charmap:      $charmap
 echo timezone:     $timezone
-echo LANG:         $LANG
 echo Image size:   ${size} MB
 echo Uploading to: $bucket/$prefix
+
+exit
 
 set -e
 set -x
@@ -296,10 +305,12 @@ test -e /dev/ptmx || chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
 
 chroot ubuntu apt-get -f install -y
 
-# Change these to your locale and timezone
-chroot ubuntu localedef -i en_US -c -f UTF-8 en_US.UTF-8
-echo $timezone >ubuntu/etc/timezone
+# Set locale
+chroot ubuntu localedef -c -input=$locale --charmap=$charmap $locale.$charmap
 echo "LANG=\"$LANG\""  >ubuntu/etc/default/locale
+
+# Set timezone
+echo $timezone >ubuntu/etc/timezone
 /bin/cp -f ubuntu/usr/share/zoneinfo/$timezone ubuntu/etc/localtime
 
 # Basic sources.list
@@ -402,7 +413,7 @@ EOF
 
 # Script to run user-data if it looks like a script
 curl -s -o ubuntu/usr/local/sbin/ec2-run-user-data \
-  http://ec2ubuntu.googlecode.com/svn/trunk/bin/ec2-run-user-data
+  http://ec2ubuntu.googlecode.com/svn-history/r$VERSION/trunk/bin/ec2-run-user-data
 chmod 755 ubuntu/usr/local/sbin/ec2-run-user-data
 
 # ec2-get-credentials
