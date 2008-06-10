@@ -49,6 +49,9 @@
 #
 # History:
 #
+#   2008-06-09 Eric Hammond <ehammond@thinksome.com>
+#   - Prevent prompting for desktop packages with DEBIAN_FRONTEND=noninteractive
+#
 #   2008-06-04 Eric Hammond <ehammond@thinksome.com>
 #   - Run --script file directly if it is executable, otherwise use /bin/bash
 #   - Option to --script can be a quoted command line.
@@ -335,7 +338,9 @@ ln -s /sbin/MAKEDEV ubuntu/dev/MAKEDEV
 
 # Upgrade/install packages
 chroot ubuntu apt-get -y upgrade
+export DEBIAN_FRONTEND=noninteractive
 chroot ubuntu apt-get install -y $packages
+unset DEBIAN_FRONTEND
 
 # EC2 kernel modules
 for module in $modules; do
