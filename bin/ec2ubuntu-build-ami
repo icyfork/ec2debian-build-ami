@@ -2,9 +2,10 @@
 #
 # ec2ubuntu-build-ami
 #
-# This script builds, bundles, and uploads an Ubuntu base install AMI
-# for Amazon EC2.  This can be run on any of the following Fedora Core
-# AMIs, depending on what type of new Ubuntu AMI you wish to create:
+# This script builds, bundles, and uploads an Ubuntu or Debian AMI for
+# Amazon EC2.  This can be run on any of the following Fedora Core
+# AMIs, depending on what type of new Ubuntu or Debian AMI you wish to
+# create:
 #
 #   32-bit, 2.6.21 kernel: ami-f51aff9c
 #   32-bit, 2.6.16 kernel: ami-20b65349
@@ -20,8 +21,9 @@
 #    --secret-key ID       - Defaults to $AWS_SECRET_ACCESS_KEY_ID
 #    --private-key PATH    - Defaults to $EC2_PRIVATE_KEY
 #    --cert PATH           - Defaults to $EC2_CERT
-#    --release VERSION     - One of: 6.06 6.10 7.04 7.10 8.04
-#    --codename NAME       - Only needed if release not recognized.
+#    --distribution NAME   - ubuntu                                  debian
+#    --codename NAME       - dapper edgy feisty gusty hardy intrepid etch lenny
+#    --release VERSION     - 6.06   6.10 7.04   7.10  8.04  8.10     4.0  5.0
 #    --timezone ZONE       - Defaults to UTC
 #    --locale LOCALE       - Defaults to en_US
 #    --charmap CHARMAP     - Defaults to UTF-8
@@ -37,19 +39,34 @@
 #    You can also use "--desktop yes" to install the desktop packages
 #    without the NX software.
 #
-# For Amazon EC2 AMIs built using this script:
+# Example:
+#
+#   Build an Ubuntu 8.04 Hardy base install AMI and upload to MYBUCKET:
+#
+#   bash ec2ubuntu-build-ami                                    \
+#   --codename   hardy                                          \
+#   --bucket     MYBUCKET                                       \
+#   --user       $AWS_USER_ID                                   \
+#   --access-key $AWS_ACCESS_KEY_ID                             \
+#   --secret-key $AWS_SECRET_ACCESS_KEY
+#
+# Amazon EC2 AMIs built using this script:
 #
 #   http://alestic.com
 #
-# For updated versions of this script:
+# Updated versions of this script:
 #
 #   http://code.google.com/p/ec2ubuntu/
 #
-# For general Ubuntu on EC2 support:
+# General Ubuntu on EC2 support (including support for this script):
 #
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2008-06-28 Eric Hammond <ehammond@thinksome.com>
+#   - Enhance to support building Debian AMIs as well as Ubuntu AMIs.
+#   - Add "intrepid" in case it the Ubuntu 8.10 alpha release might work.
 #
 #   2008-06-10 Thomas Shealy <thomas.shealy@gmail.com>
 #   - Upgrade NX server to latest version.
@@ -176,12 +193,13 @@
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
 
-packages="ubuntu-standard openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby1.8 patch alien"
+packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby1.8 patch alien"
 
 while [ $# -gt 0 ]; do
   case $1 in
-    --release)     release=$2;                          shift 2 ;;
+    --distribution) distribution=$2;                    shift 2 ;;
     --codename)    codename=$2;                         shift 2 ;;
+    --release)     release=$2;                          shift 2 ;;
     --tag)         tag=$2;                              shift 2 ;;
     --bucket)      bucket=$2;                           shift 2 ;;
     --prefix)      prefix=$2;                           shift 2 ;;
@@ -197,24 +215,53 @@ while [ $# -gt 0 ]; do
     --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
-    --desktop)     desktop=$2
-               packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
-                                                        shift 2 ;;
+    --desktop)     desktop=$2;                          shift 2 ;;
     --builddir)    builddir=$2;                         shift 2 ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
 done
 
-true ${release:=8.04}
-if [ "$codename" = "" ]; then
+if [ "$codename" = "" -a "$release" = "" ]; then
+  codename=hardy
+fi
+
+if [ "$release" = "" ]; then
+  case $codename in
+    dapper)   release=6.06 ;;
+    edgy)     release=6.10 ;;
+    feisty)   release=7.04 ;;
+    gutsy)    release=7.10 ;;
+    hardy)    release=8.04 ;;
+    intrepid) release=8.10 ;;
+    etch)     release=4.0 ;;
+    lenny)    release=5.0 ;;
+    sid)      release=unstable ;;
+    *)        echo "$0: Unrecognized codename: $codename" >&2; exit 1;
+  esac
+elif [ "$codename" = "" ]; then
   case $release in
     6.06)  codename=dapper ;;
     6.10)  codename=edgy   ;;
     7.04)  codename=feisty ;;
     7.10)  codename=gutsy  ;;
     8.04)  codename=hardy  ;;
+    8.10)  codename=intrepid  ;;
     *)     echo "$0: Unrecognized release: $release" >&2; exit 1;
   esac
+fi
+
+if [ "$distribution" = "" ]; then
+  case $codename in
+    dapper|edgy|feisty|gutsy|hardy|intrepid)      distribution=ubuntu ;;
+    hamm|slink|potato|woody|sarge|etch|lenny|sid) distribution=debian ;;
+    *)     echo "$0: Unrecognized codename: $codename" >&2; exit 1;
+  esac
+fi
+
+if [ "$codename" = "sid" ]; then
+  echo >&2 "You really don't want to build a Debian unstable sid AMI :)"
+  echo >&2 "http://wooledge.org/~greg/sidfaq.html"
+  exit 1
 fi
 
 # Required and default parameters
@@ -223,7 +270,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
-     ${tag:=custom} ${prefix:=ubuntu-$release-$codename-$tag-$(date +%Y%m%d)} \
+     ${tag:=custom} ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
      ${builddir:=/mnt/build}
 
 if [ "$codename" == "dapper" ]; then
@@ -232,12 +279,22 @@ else
   true ${size:=10240}
 fi
 
-echo Building AMI for Ubuntu $release $codename
+if [ "$distribution" = "ubuntu" ]; then
+  packages="ubuntu-standard $packages"
+  if [ "$desktop" != "" ]; then
+    packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
+  fi
+elif [ "$distribution" = "debian" ]; then
+  packages="$packages udev psmisc lsb-release"
+fi
+                             
+echo Building AMI for $distribution $release $codename
 echo locale:       $locale
 echo charmap:      $charmap
 echo timezone:     $timezone
 echo Image size:   ${size} MB
 echo Uploading to: $bucket/$prefix
+echo Packages:     $packages
 
 set -e
 set -x
@@ -246,7 +303,9 @@ set -x
 
 mkdir -p $builddir
 cd $builddir
-mkdir -p ubuntu
+
+imagedir=$builddir/$distribution
+mkdir -p $imagedir
 
 if which apt-get >/dev/null 2>/dev/null; then
   # Ubuntu / Debian
@@ -275,19 +334,21 @@ else
   bsarch="i386"
   export notlongext=""
 fi
-echo "modules: $modules"
+echo "bundlearch: $bundlearch"
+echo "bsarch:     $bsarch"
+echo "modules:    $modules"
 
 if [ "$desktop" = "nx" ]; then
   notlongext="$notlongext-desktop"
 fi
 
 # Don't launch daemons on apt-get install
-mkdir -p ubuntu/usr/sbin/
-cat << EOF > ubuntu/usr/sbin/policy-rc.d
+mkdir -p $imagedir/usr/sbin/
+cat << EOF > $imagedir/usr/sbin/policy-rc.d
 #!/bin/sh
 exit 101
 EOF
-chmod 755 ubuntu/usr/sbin/policy-rc.d
+chmod 755 $imagedir/usr/sbin/policy-rc.d
 
 # Bootstrap Ubuntu
 BSURL=http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
@@ -298,32 +359,41 @@ curl -s $BSURL/$BSVER.tar.gz |
 curl -s $BSURL/${BSVER}_all.deb > /tmp/${BSVER}_all.deb
 ar p /tmp/${BSVER}_all.deb data.tar.gz |
   tar xvzOf - ./usr/share/debootstrap/devices.tar.gz > $BSDIR/devices.tar.gz
-if [ "$codename" = "hardy" ]; then
-  ln -s gutsy $BSDIR/scripts/ubuntu/$codename
-fi
-ln -s ubuntu/$codename $BSDIR/scripts/$codename
+case "$codename" in
+  hardy|intrepid) ln -s gutsy $BSDIR/scripts/ubuntu/$codename ;;
+  lenny|etch)     ln -s sid   $BSDIR/scripts/debian/$codename ;;
+esac
+(cd $BSDIR/scripts ; ln -s */$codename $codename)
 export DEBOOTSTRAP_DIR=$BSDIR
 #perl -pi.bak -e 'print "set -v -x\n" if $.==2' $BSDIR/debootstrap
-$BSDIR/debootstrap --arch $bsarch $codename ubuntu http://us.archive.ubuntu.com/ubuntu
+$BSDIR/debootstrap --arch $bsarch $codename $imagedir
 
-chroot ubuntu mount -t proc none /proc
-chroot ubuntu mkdir -p /dev/pts
-chroot ubuntu mount -t devpts none /dev/pts
-test -e /dev/ptmx || chroot ubuntu mknod --mode 666 /dev/ptmx c 5 2
+chroot $imagedir mount -t proc none /proc
+chroot $imagedir mkdir -p /dev/pts
+chroot $imagedir mount -t devpts none /dev/pts
+test -e /dev/ptmx || chroot $imagedir mknod --mode 666 /dev/ptmx c 5 2
 
-chroot ubuntu apt-get -f install -y
+chroot $imagedir apt-get -f install -y
 
 # Set locale
-chroot ubuntu localedef -c --inputfile=$locale --charmap=$charmap $locale.$charmap
-echo "LANG=\"$LANG\""  >ubuntu/etc/default/locale
+chroot $imagedir apt-get install -y --force-yes locales # for Debian
+chroot $imagedir localedef -c --inputfile=$locale --charmap=$charmap $locale.$charmap
+echo "LANG=\"$LANG\""  >$imagedir/etc/default/locale
 
 # Set timezone
-echo $timezone >ubuntu/etc/timezone
-/bin/cp -f ubuntu/usr/share/zoneinfo/$timezone ubuntu/etc/localtime
+echo $timezone >$imagedir/etc/timezone
+/bin/cp -f $imagedir/usr/share/zoneinfo/$timezone $imagedir/etc/localtime
 
 # Basic sources.list
-mv ubuntu/etc/apt/sources.list ubuntu/etc/apt/sources.list.orig || true
-cat <<EOF >ubuntu/etc/apt/sources.list
+mv $imagedir/etc/apt/sources.list $imagedir/etc/apt/sources.list.orig || true
+if [ "$distribution" = "debian" ]; then
+  cat <<EOF >$imagedir/etc/apt/sources.list
+deb http://http.us.debian.org/debian   $codename         main contrib non-free
+#deb http://non-us.debian.org/debian-non-US stable/non-US main contrib non-free
+deb http://security.debian.org         $codename/updates main contrib non-free
+EOF
+else
+  cat <<EOF >$imagedir/etc/apt/sources.list
 deb http://us.archive.ubuntu.com/ubuntu $codename main restricted universe multiverse
 deb-src http://us.archive.ubuntu.com/ubuntu $codename main restricted universe multiverse
 
@@ -333,49 +403,51 @@ deb-src http://us.archive.ubuntu.com/ubuntu $codename-updates main restricted un
 deb http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
 deb-src http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
 EOF
+fi
 
 # Update package list
-chroot ubuntu apt-get update
+chroot $imagedir apt-get update
 
 # Architecture/release specific instructions
 if [ "$bundlearch" = "i386" ]; then
   if [ "$codename" = "edgy"   -o \
        "$codename" = "feisty" -o \
-       "$codename" = "gutsy" ]; then
-    chroot ubuntu apt-get install -y libc6-xen
+       "$codename" = "gutsy"  -o \
+       "$distribution" = "debian" ]; then
+    chroot $imagedir apt-get install -y libc6-xen
   fi
   if [ "$codename" = "hardy" ]; then
     # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
-    rm -rf ubuntu/lib/tls
+    rm -rf $imagedir/lib/tls
   fi
 else
-  chroot ubuntu apt-get install -y ia32-libs
+  chroot $imagedir apt-get install -y ia32-libs
 fi
 
 # MAKEDEV is expected in /dev by some packages.
-ln -s /sbin/MAKEDEV ubuntu/dev/MAKEDEV
+ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
 
 # Upgrade/install packages
-chroot ubuntu apt-get -y upgrade
+chroot $imagedir apt-get -y upgrade
 export DEBIAN_FRONTEND=noninteractive
-chroot ubuntu apt-get install -y $packages
+chroot $imagedir apt-get install -y $packages
 unset DEBIAN_FRONTEND
 
 # EC2 kernel modules
 for module in $modules; do
-  curl -s $module | tar xzC ubuntu
+  curl -s $module | tar xzC $imagedir
 done
-chroot ubuntu depmod -a
+chroot $imagedir depmod -a
 
 # Xen expects a single tty1
-/bin/rm -f ubuntu/etc/event.d/tty[2-6]
+/bin/rm -f $imagedir/etc/event.d/tty[2-6]
 
 # Security
-chroot ubuntu shadowconfig on
-chroot ubuntu passwd -d root
+chroot $imagedir shadowconfig on
+chroot $imagedir passwd -d root
 
 # Basic networking
-cat <<'EOF' >ubuntu/etc/network/interfaces
+cat <<'EOF' >$imagedir/etc/network/interfaces
 auto lo
 iface lo inet loopback
 
@@ -383,7 +455,7 @@ auto eth0
 iface eth0 inet dhcp
 EOF
 
-cat <<'EOF' >ubuntu/etc/hosts
+cat <<'EOF' >$imagedir/etc/hosts
 127.0.0.1 localhost.localdomain localhost
 
 # The following lines are desirable for IPv6 capable hosts
@@ -395,21 +467,22 @@ ff02::2 ip6-allrouters
 ff02::3 ip6-allhosts
 EOF
 
-cat <<'EOF' >>ubuntu/etc/ssh/sshd_config
+cat <<'EOF' >>$imagedir/etc/ssh/sshd_config
 UseDNS no
 EOF
 
 # Fedora 6/8 initrd starts nash-hotplug which uses 100% CPU and prevents
 # udev from starting, not to mention slowing down everything else.
-cat <<EOF >ubuntu/etc/init.d/ec2-killall-nash-hotplug
+#TBD: Where is "killall" in Debian?
+cat <<EOF >$imagedir/etc/init.d/ec2-killall-nash-hotplug
 #!/bin/sh
 /usr/bin/killall nash-hotplug
 EOF
-chmod 755 ubuntu/etc/init.d/ec2-killall-nash-hotplug
-ln -s ../init.d/ec2-killall-nash-hotplug ubuntu/etc/rcS.d/S00ec2-killall-nash-hotplug
+chmod 755 $imagedir/etc/init.d/ec2-killall-nash-hotplug
+ln -s ../init.d/ec2-killall-nash-hotplug $imagedir/etc/rcS.d/S00ec2-killall-nash-hotplug
 
 # Startup steps
-cat <<EOF >ubuntu/etc/rc.local
+cat <<EOF >$imagedir/etc/rc.local
 #!/bin/sh -e
 
 # Get ssh credentials from instance parameters or ephemeral storage.
@@ -420,12 +493,12 @@ cat <<EOF >ubuntu/etc/rc.local
 EOF
 
 # Script to run user-data if it looks like a script
-curl -s -o ubuntu/usr/local/sbin/ec2-run-user-data \
+curl -s -o $imagedir/usr/local/sbin/ec2-run-user-data \
   http://ec2ubuntu.googlecode.com/svn-history/r41/trunk/bin/ec2-run-user-data
-chmod 755 ubuntu/usr/local/sbin/ec2-run-user-data
+chmod 755 $imagedir/usr/local/sbin/ec2-run-user-data
 
 # ec2-get-credentials
-cat <<'EOF' >ubuntu/usr/local/sbin/ec2-get-credentials
+cat <<'EOF' >$imagedir/usr/local/sbin/ec2-get-credentials
 #!/bin/bash
 # Retrieve the ssh credentials and add to authorized_keys file.
 # Based on /usr/local/sbin/ec2-get-credentials from ami-20b65349
@@ -458,18 +531,18 @@ elif [ -e $public_key_ephemeral ] ; then
   chmod 600 $public_key_ephemeral
 fi
 EOF
-chmod 755 ubuntu/usr/local/sbin/ec2-get-credentials
+chmod 755 $imagedir/usr/local/sbin/ec2-get-credentials
 
 # Install and patch Amazon AMI tools
 curl -s \
   http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-20041.noarch.rpm \
-  > ubuntu/tmp/ec2-ami-tools.noarch.rpm
-chroot ubuntu alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm
+  > $imagedir/tmp/ec2-ami-tools.noarch.rpm
+chroot $imagedir alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm
 
-ln -s /usr/lib/site_ruby/aes ubuntu/usr/local/lib/site_ruby/1.8/aes
-ln -s /usr/lib/site_ruby/ec2 ubuntu/usr/local/lib/site_ruby/1.8/ec2
+ln -s /usr/lib/site_ruby/aes $imagedir/usr/local/lib/site_ruby/1.8/aes
+ln -s /usr/lib/site_ruby/ec2 $imagedir/usr/local/lib/site_ruby/1.8/ec2
 
-chroot ubuntu patch -d /usr/lib/site_ruby/aes/amiutil <<'EOF'
+chroot $imagedir patch -d /usr/lib/site_ruby/aes/amiutil <<'EOF'
 --- /usr/lib/site_ruby/aes/amiutil/http.rb.orig	2008-04-02 22:27:01.000000000 -0400
 +++ /usr/lib/site_ruby/aes/amiutil/http.rb	2008-04-02 22:28:05.000000000 -0400
 @@ -58,7 +58,7 @@
@@ -483,20 +556,21 @@ chroot ubuntu patch -d /usr/lib/site_ruby/aes/amiutil <<'EOF'
        unless $?.exitstatus == 0
 --- /usr/lib/site_ruby/aes/amiutil/bundlevol.rb.orig	2008-04-03 00:57:26.000000000 -0400
 +++ /usr/lib/site_ruby/aes/amiutil/bundlevol.rb	2008-04-03 00:58:42.000000000 -0400
-@@ -148,6 +148,10 @@
+@@ -148,6 +148,11 @@
    if image_file.index( volume ) == 0
      exclude << image_file
    end
 +
-+  # UGLY HACK for Ubuntu: Don't save the MAC address as that prevents
-+  # networking from working on rebundled AMIs
++ # UGLY HACK for Ubuntu & Debian: Don't save the MAC address as that
++ # prevents networking from working on rebundled AMIs
 +  exclude << "/etc/udev/rules.d/70-persistent-net.rules"
++  exclude << "/etc/udev/rules.d/z25_persistent-net.rules"
    
    # If we are inheriting instance data but can't access it we want to fail early
    if p.inherit && !AES::AmiUtils::InstanceData.new.instance_data_accessible
 EOF
 
-chroot ubuntu patch -d /usr/lib/site_ruby/ec2/platform/base <<'EOF'
+chroot $imagedir patch -d /usr/lib/site_ruby/ec2/platform/base <<'EOF'
 --- /usr/lib/site_ruby/ec2/platform/base/pipeline.rb.orig	2008-04-02 19:41:54.000000000 -0700
 +++ /usr/lib/site_ruby/ec2/platform/base/pipeline.rb	2008-04-02 19:47:17.000000000 -0700
 @@ -105,7 +105,8 @@
@@ -511,70 +585,70 @@ chroot ubuntu patch -d /usr/lib/site_ruby/ec2/platform/base <<'EOF'
            STDERR.puts("Pipeline.execute: command = [#{invocation}]") if verbose
 EOF
 
-cat <<EOF >ubuntu/etc/init.d/ec2-mkdir-tmp
+cat <<EOF >$imagedir/etc/init.d/ec2-mkdir-tmp
 #!/bin/sh
 # Create /tmp if missing (as it's nice to bundle without it).
 test -d /tmp || mkdir /tmp
 chmod 01777 /tmp
 EOF
-chmod +x ubuntu/etc/init.d/ec2-mkdir-tmp
-ln -s ../init.d/ec2-mkdir-tmp ubuntu/etc/rcS.d/S36ec2-mkdir-tmp
+chmod +x $imagedir/etc/init.d/ec2-mkdir-tmp
+ln -s ../init.d/ec2-mkdir-tmp $imagedir/etc/rcS.d/S36ec2-mkdir-tmp
 
 
 # Generate new ssh host keys on first boot
 # Otherwise everybody knows our secret host key which makes it non-secret
-cat <<EOF >ubuntu/etc/init.d/ec2-ssh-host-key-gen
+cat <<EOF >$imagedir/etc/init.d/ec2-ssh-host-key-gen
 #!/bin/sh
 rm -f /etc/ssh/ssh_host_*_key*
 ssh-keygen -f /etc/ssh/ssh_host_rsa_key -t rsa -C 'host' -N '' | logger -t \$0
 ssh-keygen -f /etc/ssh/ssh_host_dsa_key -t dsa -C 'host' -N '' | logger -t \$0
 rm -f /etc/rcS.d/S50ec2-ssh-host-key-gen
 EOF
-chmod +x ubuntu/etc/init.d/ec2-ssh-host-key-gen
-ln -s ../init.d/ec2-ssh-host-key-gen ubuntu/etc/rcS.d/S50ec2-ssh-host-key-gen
+chmod +x $imagedir/etc/init.d/ec2-ssh-host-key-gen
+ln -s ../init.d/ec2-ssh-host-key-gen $imagedir/etc/rcS.d/S50ec2-ssh-host-key-gen
 
 # Inside Xen, CMOS clock is irrelevant, so save seconds at boot
-/bin/rm -f ubuntu/etc/rc?.d/*hwclock*
+/bin/rm -f $imagedir/etc/rc?.d/*hwclock*
 
 # We're missing the apparmor kernel module for now so avoid boot warnings
-/bin/rm -f ubuntu/etc/rc?.d/*apparmor
+/bin/rm -f $imagedir/etc/rc?.d/*apparmor
 
 # Release-specific
 if [ "$codename" = "gutsy" ]; then
   # Install a copy of rsync with no lutimes support, as the Amazon EC2
   # kernel does not support this newer feature to change symlink timestamps.
-  curl -s -o ubuntu/tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb \
+  curl -s -o $imagedir/tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb \
     https://level22.s3.amazonaws.com/20080203-rsync-no-lutimes/rsync_2.6.9-5ubuntu1_$bsarch.deb
-  chroot ubuntu dpkg --install /tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb
+  chroot $imagedir dpkg --install /tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb
 fi
 
 # Are we installing the desktop with NoMachine NX?
 if [ "$desktop" = "nx" ]; then
   if [ "$bundlearch" = "i386" ]; then
-    nxclient_pkg="nxclient_3.2.0-9_x86_64.deb"
-    nxnode_pkg="nxnode_3.2.0-10_x86_64.deb"
-    nxserver_pkg="nxserver_3.2.0-13_x86_64.deb"
+    nxclient_pkg="nxclient_3.2.0-9_i386.deb"
+    nxnode_pkg="nxnode_3.2.0-11_i386.deb"
+    nxserver_pkg="nxserver_3.2.0-13_i386.deb"
   else
     nxclient_pkg="nxclient_3.2.0-9_x86_64.deb"
-    nxnode_pkg="nxnode_3.2.0-10_x86_64.deb"
+    nxnode_pkg="nxnode_3.2.0-11_x86_64.deb"
     nxserver_pkg="nxserver_3.2.0-13_x86_64.deb"
   fi
 
-  curl -o ubuntu/tmp/$nxclient_pkg \
+  curl -o $imagedir/tmp/$nxclient_pkg \
     http://64.34.161.181/download/3.2.0/Linux/$nxclient_pkg
-  curl -o ubuntu/tmp/$nxnode_pkg \
+  curl -o $imagedir/tmp/$nxnode_pkg \
     http://64.34.161.181/download/3.2.0/Linux/$nxnode_pkg
-  curl -o ubuntu/tmp/$nxserver_pkg \
+  curl -o $imagedir/tmp/$nxserver_pkg \
     http://64.34.161.181/download/3.2.0/Linux/FE/$nxserver_pkg
 
-  chroot ubuntu dpkg -i /tmp/$nxclient_pkg
-  chroot ubuntu dpkg -i /tmp/$nxnode_pkg
-  chroot ubuntu dpkg -i /tmp/$nxserver_pkg
+  chroot $imagedir dpkg -i /tmp/$nxclient_pkg
+  chroot $imagedir dpkg -i /tmp/$nxnode_pkg
+  chroot $imagedir dpkg -i /tmp/$nxserver_pkg
 fi
 
 # Export build parameters so they are available in external scripts
 export release codename tag bucket prefix timezone locale charmap size \
-  scripts packages modules desktop builddir bundlearch AWS_USER_ID \
+  scripts packages modules desktop builddir imagedir bundlearch AWS_USER_ID \
   AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY EC2_PRIVATE_KEY EC2_CERT
 
 # Invoke external scripts/commands if requested
@@ -589,19 +663,19 @@ for script in "${scripts[@]}"; do
 done
 
 # cleanup
-if [ "$codename" != "dapper" ]; then
-  chroot ubuntu apt-get -y autoremove --purge patch alien
+if [ "$codename" != "dapper" -a "$codename" != "etch" ]; then
+  chroot $imagedir apt-get -y autoremove --purge patch alien
 fi
-chroot ubuntu apt-get clean
-rm -f  ubuntu/usr/sbin/policy-rc.d
+chroot $imagedir apt-get clean
+rm -f  $imagedir/usr/sbin/policy-rc.d
 rm -rf /var/log/{bootstrap,dpkg}.log /var/cache/apt/*.bin /var/lib/apt/lists/
-rm -rf ubuntu/tmp/* ubuntu/root/.bash_history
+rm -rf $imagedir/tmp/* $imagedir/root/.bash_history
 
 # Bundle & upload to S3
-cp $EC2_PRIVATE_KEY ubuntu/tmp/pk.pem
-cp $EC2_CERT        ubuntu/tmp/cert.pem
+cp $EC2_PRIVATE_KEY $imagedir/tmp/pk.pem
+cp $EC2_CERT        $imagedir/tmp/cert.pem
 
-chroot ubuntu ec2-bundle-vol            \
+chroot $imagedir ec2-bundle-vol         \
   -r $bundlearch                        \
   -d /tmp                               \
   -p $prefix                            \
@@ -614,12 +688,12 @@ chroot ubuntu ec2-bundle-vol            \
 ec2-upload-bundle                       \
   --retry                               \
   -b $bucket                            \
-  -m ubuntu/tmp/$prefix.manifest.xml    \
+  -m $imagedir/tmp/$prefix.manifest.xml \
   -a $AWS_ACCESS_KEY_ID                 \
   -s $AWS_SECRET_ACCESS_KEY
 
-umount ubuntu/dev/pts
-umount ubuntu/proc
+umount $imagedir/dev/pts
+umount $imagedir/proc || true
 
 set +x
 
