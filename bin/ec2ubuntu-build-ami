@@ -43,12 +43,14 @@
 #
 #   Build an Ubuntu 8.04 Hardy base install AMI and upload to MYBUCKET:
 #
-#   bash ec2ubuntu-build-ami                                    \
-#   --codename   hardy                                          \
-#   --bucket     MYBUCKET                                       \
-#   --user       $AWS_USER_ID                                   \
-#   --access-key $AWS_ACCESS_KEY_ID                             \
-#   --secret-key $AWS_SECRET_ACCESS_KEY
+#   bash ec2ubuntu-build-ami             \
+#   --codename    hardy                  \
+#   --bucket      MYBUCKET               \
+#   --user        $AWS_USER_ID           \
+#   --access-key  $AWS_ACCESS_KEY_ID     \
+#   --secret-key  $AWS_SECRET_ACCESS_KEY \
+#   --private-key pk*.pem                \
+#   --cert        cert*.pem 
 #
 # Amazon EC2 AMIs built using this script:
 #
@@ -66,7 +68,7 @@
 #
 #   2008-06-28 Eric Hammond <ehammond@thinksome.com>
 #   - Enhance to support building Debian AMIs as well as Ubuntu AMIs.
-#   - Add "intrepid" in case it the Ubuntu 8.10 alpha release might work.
+#   - Add "intrepid" for the Ubuntu 8.10 alpha release.
 #
 #   2008-06-10 Thomas Shealy <thomas.shealy@gmail.com>
 #   - Upgrade NX server to latest version.
