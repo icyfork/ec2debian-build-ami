@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# install-rightscale
+#
+
+#### THIS IS A WORK IN PROGRESS.
+
+set -e
+set -x
+
+# Install RightScale scripts
+curl -so /tmp/rightscale_scripts.tgz \
+  http://s3.amazonaws.com/rightscale_scripts/rightscale_scripts_V3_0_0.tgz
+tar xzf /tmp/rightscale_scripts.tgz -C /opt/
+mkdir -p /var/spool/ec2/
+mkdir -p /var/spool/ec2/meta-data
+
+# Run at boot time
+ln /opt/rightscale/etc/init.d/rightscale /etc/init.d/rightscale
+chmod +x /opt/rightscale/etc/init.d/rightscale
+for level in 2 3 4 5; do
+  ln -s ../init.d/rightscale /etc/rc$level.d/S81rightscale
+  ln -s ../init.d/rightscale /etc/rc$level.d/K01rightscale
+done
+
+# Required software
+apt-get install -y rubygems unzip syslog-ng subversion
+
+# Install RightScale rubygems
+curl -so /tmp/rubygems-0.9.4.6.tgz \
+  http://s3.amazonaws.com/rightscale_software/rubygems-0.9.4.6.tgz
+tar xzf /tmp/rubygems-0.9.4.6.tgz
+(cd rubygems-0.9.4.6; ruby setup.rb)
+gem update
+gem source -a http://mirror.rightscale.com
+curl -o /tmp/s3sync.gem \
+  http://s3.amazonaws.com/rightscale_software/s3sync-1.1.4.gem
+gem install /tmp/s3sync.gem xml-simple net-ssh net-sftp
+
+# Wait for the network before trying to download instance data on startup
+perl -pi.bak -e 'if($.==2){print q{
+perl -MIO::Socket::INET -e "
+ until(new IO::Socket::INET(q{169.254.169.254:80})){print qq{Waiting for network...\n};sleep 1}
+" | logger -t $0
+}}'  /etc/init.d/rightscale
