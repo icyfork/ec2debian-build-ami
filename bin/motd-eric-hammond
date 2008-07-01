@@ -1,0 +1,17 @@
+#!/bin/sh
+
+cat <<EOF >>$imagedir/etc/rc.local
+
+distribution=\$(lsb_release --id --short)
+release=\$(lsb_release --release --short)
+codename=\$(lsb_release --codename --short)
+cat <<EOMOTD >>/etc/motd
+
+Amazon EC2 \$distribution \$release \$codename AMI built by
+Eric Hammond <ehammond@thinksome.com>
+For more information: http://ec2\${codename}$notlongext.notlong.com
+
+EOMOTD
+
+exit 0
+EOF
