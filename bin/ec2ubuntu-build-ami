@@ -66,6 +66,9 @@
 #
 # History:
 #
+#   2008-06-30 Eric Hammond <ehammond@thinksome.com>
+#   - Support building Debian desktop AMIs.
+#
 #   2008-06-28 Eric Hammond <ehammond@thinksome.com>
 #   - Enhance to support building Debian AMIs as well as Ubuntu AMIs.
 #   - Add "intrepid" for the Ubuntu 8.10 alpha release.
@@ -283,7 +286,7 @@ fi
 
 if [ "$distribution" = "ubuntu" ]; then
   packages="ubuntu-standard $packages"
-  if [ "$desktop" != "" ]; then
+  if [ "$desktop" ]; then
     packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
   fi
 elif [ "$distribution" = "debian" ]; then
@@ -340,7 +343,7 @@ echo "bundlearch: $bundlearch"
 echo "bsarch:     $bsarch"
 echo "modules:    $modules"
 
-if [ "$desktop" = "nx" ]; then
+if [ "$desktop" ]; then
   notlongext="$notlongext-desktop"
 fi
 
@@ -433,6 +436,10 @@ ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
 chroot $imagedir apt-get -y upgrade
 export DEBIAN_FRONTEND=noninteractive
 chroot $imagedir apt-get install -y $packages
+if [ "$desktop" -a "$distribution" = "debian" ]; then
+  chroot $imagedir aptitude install -y desktop gnome
+  chroot $imagedir aptitude install -y desktop kde
+fi
 unset DEBIAN_FRONTEND
 
 # EC2 kernel modules
