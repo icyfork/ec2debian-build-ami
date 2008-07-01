@@ -291,6 +291,9 @@ if [ "$distribution" = "ubuntu" ]; then
   fi
 elif [ "$distribution" = "debian" ]; then
   packages="$packages udev psmisc lsb-release"
+  if [ "$desktop" ]; then
+    packages="$packages user-setup"
+  fi
 fi
                              
 echo Building AMI for $distribution $release $codename
