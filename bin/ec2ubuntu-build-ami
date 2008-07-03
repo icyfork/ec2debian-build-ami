@@ -66,6 +66,9 @@
 #
 # History:
 #
+#   2008-07-03 Eric Hammond <ehammond@thinksome.com>
+#   - Split startup scripts into their own files and reorganize a bit.
+#
 #   2008-06-30 Eric Hammond <ehammond@thinksome.com>
 #   - Support building Debian desktop AMIs.
 #
@@ -197,7 +200,7 @@
 #
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
-svnpath=http://ec2ubuntu.googlecode.com/svn-history/r76
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r77
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby1.8 patch alien"
 
@@ -544,7 +547,7 @@ EOF
 #EOF
 
 # Download and install startup scripts.
-initconf(){
+install_init(){
   script=$1
   startpriority=$2
   startlevels=$3
@@ -560,11 +563,11 @@ initconf(){
   done
 }
 
-initconf ec2-killall-nash-hotplug 00 "S"
-initconf ec2-mkdir-tmp            36 "S"
-initconf ec2-ssh-host-key-gen     50 "S"
-initconf ec2-get-credentials      70 "2 3 4 5"
-initconf ec2-run-user-data        71 "2 3 4 5"
+install_init ec2-killall-nash-hotplug 00 "S"
+install_init ec2-mkdir-tmp            36 "S"
+install_init ec2-ssh-host-key-gen     50 "S"
+install_init ec2-get-credentials      70 "2 3 4 5"
+install_init ec2-run-user-data        71 "2 3 4 5"
 
 # Inside Xen, CMOS clock is irrelevant, so save seconds at boot
 /bin/rm -f $imagedir/etc/rc?.d/*hwclock*

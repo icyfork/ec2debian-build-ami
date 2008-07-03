@@ -8,9 +8,4 @@
 #
 #
 
-prog=$(basename $0)
-logger="logger -t $prog"
-
-$logger "Killing nash-hotplug"
-
 /usr/bin/killall nash-hotplug
