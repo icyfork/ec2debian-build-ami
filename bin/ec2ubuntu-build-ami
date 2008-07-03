@@ -197,6 +197,7 @@
 #
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r73
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby1.8 patch alien"
 
@@ -483,68 +484,6 @@ cat <<'EOF' >>$imagedir/etc/ssh/sshd_config
 UseDNS no
 EOF
 
-# Fedora 6/8 initrd starts nash-hotplug which uses 100% CPU and prevents
-# udev from starting, not to mention slowing down everything else.
-#TBD: Where is "killall" in Debian?
-cat <<EOF >$imagedir/etc/init.d/ec2-killall-nash-hotplug
-#!/bin/sh
-/usr/bin/killall nash-hotplug
-EOF
-chmod 755 $imagedir/etc/init.d/ec2-killall-nash-hotplug
-ln -s ../init.d/ec2-killall-nash-hotplug $imagedir/etc/rcS.d/S00ec2-killall-nash-hotplug
-
-# Startup steps
-cat <<EOF >$imagedir/etc/rc.local
-#!/bin/sh -e
-
-# Get ssh credentials from instance parameters or ephemeral storage.
-/usr/local/sbin/ec2-get-credentials
-
-# If instance user-data starts with "#!" then run it on first boot.
-/usr/local/sbin/ec2-run-user-data
-EOF
-
-# Script to run user-data if it looks like a script
-curl -s -o $imagedir/usr/local/sbin/ec2-run-user-data \
-  http://ec2ubuntu.googlecode.com/svn-history/r41/trunk/bin/ec2-run-user-data
-chmod 755 $imagedir/usr/local/sbin/ec2-run-user-data
-
-# ec2-get-credentials
-cat <<'EOF' >$imagedir/usr/local/sbin/ec2-get-credentials
-#!/bin/bash
-# Retrieve the ssh credentials and add to authorized_keys file.
-# Based on /usr/local/sbin/ec2-get-credentials from ami-20b65349
-public_key_url=http://169.254.169.254/1.0/meta-data/public-keys/0/openssh-key
-public_key_file=/tmp/openssh_id.pub
-public_key_ephemeral=/mnt/openssh_id.pub
-authorized_keys=/root/.ssh/authorized_keys
-test -d /root/.ssh || mkdir -p -m 700 /root/.ssh
-perl -MIO::Socket::INET -e '
- until(new IO::Socket::INET("169.254.169.254:80")){print"Waiting for network...\n";sleep 1}
-' | logger -t "ec2"
-curl --retry 3 --silent --fail -o $public_key_file $public_key_url
-if [ $? -eq 0 -a -e $public_key_file ] ; then
-  if ! grep -s -q -f $public_key_file $authorized_keys
-  then
-    cat $public_key_file >> $authorized_keys
-    echo "New ssh key added to $authorized_keys from $public_key_url" |
-      logger -t "ec2"
-  fi
-  chmod 600 $authorized_keys
-  rm -f $public_key_file
-elif [ -e $public_key_ephemeral ] ; then
-  if ! grep -s -q -f $public_key_ephemeral $authorized_keys
-  then 
-    cat $public_key_ephemeral >> $authorized_keys
-    echo "New ssh key added to $authorized_keys from $public_key_ephemeral" |
-      logger -t "ec2"
-  fi
-  chmod 600 $authorized_keys
-  chmod 600 $public_key_ephemeral
-fi
-EOF
-chmod 755 $imagedir/usr/local/sbin/ec2-get-credentials
-
 # Install and patch Amazon AMI tools
 curl -s \
   http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-20041.noarch.rpm \
@@ -597,27 +536,35 @@ chroot $imagedir patch -d /usr/lib/site_ruby/ec2/platform/base <<'EOF'
            STDERR.puts("Pipeline.execute: command = [#{invocation}]") if verbose
 EOF
 
-cat <<EOF >$imagedir/etc/init.d/ec2-mkdir-tmp
-#!/bin/sh
-# Create /tmp if missing (as it's nice to bundle without it).
-test -d /tmp || mkdir /tmp
-chmod 01777 /tmp
-EOF
-chmod +x $imagedir/etc/init.d/ec2-mkdir-tmp
-ln -s ../init.d/ec2-mkdir-tmp $imagedir/etc/rcS.d/S36ec2-mkdir-tmp
+#TBD
+## Startup steps
+#cat <<EOF >$imagedir/etc/rc.local
+##!/bin/sh -e
+#
+#EOF
 
+# Download and install startup scripts.
+initconf(){
+  script=$1
+  startpriority=$2
+  startlevels=$3
+  stoppriority=$4
+  stoplevels=$5
+  curl -s -o $imagedir/etc/init.d/$script $svnpath/trunk/etc/init.d/$script
+  chmod 755  $imagedir/etc/init.d/$script
+  for level in $startlevels; do
+    ln -s ../init.d/$script $imagedir/etc/rc$level.d/S$startpriority$script
+  done
+  for level in $stoplevels; do
+    ln -s ../init.d/$script $imagedir/etc/rc$level.d/K$stoppriority$script
+  done
+}
 
-# Generate new ssh host keys on first boot
-# Otherwise everybody knows our secret host key which makes it non-secret
-cat <<EOF >$imagedir/etc/init.d/ec2-ssh-host-key-gen
-#!/bin/sh
-rm -f /etc/ssh/ssh_host_*_key*
-ssh-keygen -f /etc/ssh/ssh_host_rsa_key -t rsa -C 'host' -N '' | logger -t \$0
-ssh-keygen -f /etc/ssh/ssh_host_dsa_key -t dsa -C 'host' -N '' | logger -t \$0
-rm -f /etc/rcS.d/S50ec2-ssh-host-key-gen
-EOF
-chmod +x $imagedir/etc/init.d/ec2-ssh-host-key-gen
-ln -s ../init.d/ec2-ssh-host-key-gen $imagedir/etc/rcS.d/S50ec2-ssh-host-key-gen
+initconf ec2-killall-nash-hotplug 00 "S"
+initconf ec2-mkdir-tmp            36 "S"
+initconf ec2-ssh-host-key-gen     50 "S"
+initconf ec2-get-credentials      70 "2 3 4 5"
+initconf ec2-run-user-data        71 "2 3 4 5"
 
 # Inside Xen, CMOS clock is irrelevant, so save seconds at boot
 /bin/rm -f $imagedir/etc/rc?.d/*hwclock*

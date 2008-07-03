@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# ec2-killall-nash-hotplug - Kill nash-hotplug
+#
+# Fedora 6/8 initrd starts nash-hotplug which, when used on an Ubuntu
+# or Debian AMI, uses 100% CPU and prevents udev from starting, not to
+# mention taking general performance to a crawl.
+#
+#
+
+prog=$(basename $0)
+logger="logger -t $prog"
+
+$logger "Killing nash-hotplug"
+
+/usr/bin/killall nash-hotplug

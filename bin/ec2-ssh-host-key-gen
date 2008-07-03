@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# ec2-ssh-host-key-gen - Generate new ssh host keys on first boot
+#
+
+prog=$(basename $0)
+logger="logger -t $prog"
+
+$logger "Generating new ssh host keys"
+
+rm -f /etc/ssh/ssh_host_*_key*
+
+ssh-keygen -f /etc/ssh/ssh_host_rsa_key -t rsa -C 'host' -N '' | $logger
+ssh-keygen -f /etc/ssh/ssh_host_dsa_key -t dsa -C 'host' -N '' | $logger
+
+# Prevent us from running on the next boot
+chmod -x /etc/init.d/$prog
