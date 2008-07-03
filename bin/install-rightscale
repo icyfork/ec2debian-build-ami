@@ -1,12 +1,21 @@
 #!/bin/bash
 #
-# install-rightscale
+# install-rightscale - Install RightScale RightScript support
 #
 
 #### THIS IS A WORK IN PROGRESS.
 
 set -e
 set -x
+
+nochroot=$1
+
+# Move ourselves into an image being built and re-run ourselves recursively.
+if [ "$imagedir" != "" -a "x$nochroot" != "x--nochroot" ]; then
+  cp $0 $imagedir/tmp/
+  chroot $imagedir /tmp/$(basename $0) --nochroot
+  exit 0
+fi
 
 # Install RightScale scripts
 curl -so /tmp/rightscale_scripts.tgz \
@@ -38,8 +47,10 @@ curl -o /tmp/s3sync.gem \
 gem install /tmp/s3sync.gem xml-simple net-ssh net-sftp
 
 # Wait for the network before trying to download instance data on startup
+# Unfortunately, this gets overwritten when RightScale loads itself so 
+# rebundled AMIs may have trouble.
 perl -pi.bak -e 'if($.==2){print q{
 perl -MIO::Socket::INET -e "
  until(new IO::Socket::INET(q{169.254.169.254:80})){print qq{Waiting for network...\n};sleep 1}
 " | logger -t $0
-}}'  /etc/init.d/rightscale
+}}' /etc/init.d/rightscale
