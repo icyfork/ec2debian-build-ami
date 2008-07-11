@@ -1,0 +1,128 @@
+#!/bin/bash
+#
+# Install Asterisk on Ubuntu 8.04 Hardy on Amazon EC2 (DEMO DRAFT)
+#
+# Based on Ronald Lewis' guide:
+#
+#   http://ronaldlewis.com/2008/07/08/asterisk-pbx-on-amazon-ec2-how-to-guide-almost-complete/
+#
+# Instructions:
+#
+# Open up necessary ports in a new "asterisk" security group:
+#
+#   ec2-add-group --description "Asterisk" asterisk
+#   ec2-authorize asterisk -P udp -p 4569
+#   ec2-authorize asterisk -P udp -p 5060
+#   ec2-authorize asterisk -P udp -p 10000-20000
+#   
+# Run the latest AMI from http://ec2hardy.notlong.com with the 2.6.18
+# kernel (1000Hz timer) and include the "asterisk" security group:
+#
+#   ec2-run-instances       \
+#     --key XXX             \
+#     --group default       \
+#     --group asterisk      \
+#     --kernel aki-9b00e5f2 \
+#     ami-6a57b203
+#
+# On the instance, download and run the latest version of this script:
+#
+#   curl -o /mnt/install-asterisk http://ec2ubuntu-install-asterisk.notlong.com
+#   bash /mnt/install-asterisk
+#
+
+set -x
+set -e
+
+# Required packages
+
+  apt-get install -y libc6-dev g++ gcc libncurses-dev make subversion
+
+# Build Asterisk from source
+
+  svn export http://svn.digium.com/svn/asterisk/tags/1.4.21.1 /mnt/asterisk
+  cd /mnt/asterisk
+  ./configure
+
+#TBD: Need to script this part once finalized.
+#  make menuselect
+# ( > *down arrow* to option 12 > *down arrow* to option 4 > clear
+# option with *space bar* > *up arrow* to option 1 > select option with
+# *space bar*
+# return to main menu with *left arrow*
+# Type 'x' to exit and save options
+
+# Build and install sample configuration
+
+  make install samples
+
+# Configure a demo
+
+  ipaddress=$(curl http://169.254.169.254/2008-02-01/meta-data/public-ipv4)
+
+  cat >> /etc/asterisk/extensions.conf <<EOEXTENSIONS
+; Demo
+exten => *98,1,VoiceMailMain
+exten => *98,2,Hangup
+EOEXTENSIONS
+
+  patch -d /etc/asterisk <<"EOPATCH"
+--- /etc/asterisk/sip.conf.orig	2008-07-11 02:23:06.000000000 -0700
++++ /etc/asterisk/sip.conf	2008-07-11 02:27:29.000000000 -0700
+@@ -72,8 +72,8 @@
+ ;vmexten=voicemail		; dialplan extension to reach mailbox sets the 
+ 				; Message-Account in the MWI notify message 
+ 				; defaults to "asterisk"
+-;disallow=all			; First disallow all codecs
+-;allow=ulaw			; Allow codecs in order of preference
++disallow=all			; First disallow all codecs
++allow=ulaw			; Allow codecs in order of preference
+ ;allow=ilbc			; see doc/rtp-packetization for framing options
+ ;
+ ; This option specifies a preference for which music on hold class this channel
+@@ -262,7 +262,7 @@
+ ; The externip, externhost and localnet settings are used if you use Asterisk
+ ; behind a NAT device to communicate with services on the outside.
+ 
+-;externip = 200.201.202.203	; Address that we're going to put in outbound SIP
++externip = $ipaddress	; Address that we're going to put in outbound SIP
+ 				; messages if we're behind a NAT
+ 
+ 				; The externip and localnet is used
+@@ -278,7 +278,7 @@
+ 				; You may add multiple local networks.  A reasonable 
+ 				; set of defaults are:
+ ;localnet=192.168.0.0/255.255.0.0; All RFC 1918 addresses are local networks
+-;localnet=10.0.0.0/255.0.0.0	; Also RFC1918
++localnet=10.0.0.0/255.0.0.0	; Also RFC1918
+ ;localnet=172.16.0.0/12		; Another RFC1918 with CIDR notation
+ ;localnet=169.254.0.0/255.255.0.0 ;Zero conf local network
+ 
+@@ -288,7 +288,7 @@
+ ; firewall's support of SIP+RTP ports.  You configure Asterisk choice of RTP
+ ; ports for incoming audio in rtp.conf
+ ;
+-;nat=no				; Global NAT settings  (Affects all peers and users)
++nat=route			; Global NAT settings  (Affects all peers and users)
+                                 ; yes = Always ignore info and assume NAT
+                                 ; no = Use NAT mode only according to RFC3581 (;rport)
+                                 ; never = Never attempt NAT mode or RFC3581 support
+@@ -667,3 +667,16 @@
+                                 ; if the nat option is enabled. If a single RTP packet is received Asterisk will know the
+                                 ; external IP address of the remote device. If port forwarding is done at the client side
+                                 ; then UDPTL will flow to the remote device.
++
++;------------------------------------------------------------------------------
++; Demo
++;
++[1234]
++type=friend
++callerid="Asterisk" <1234>
++host=dynamic
++canreinvite=no
++secret=1234
++dtmfmode=rfc2833
++context=default
++qualify=yes
+EOPATCH
+
