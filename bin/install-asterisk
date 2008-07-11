@@ -6,8 +6,6 @@
 #
 #   http://ronaldlewis.com/2008/07/08/asterisk-pbx-on-amazon-ec2-how-to-guide-almost-complete/
 #
-# Instructions:
-#
 # Open up necessary ports in a new "asterisk" security group:
 #
 #   ec2-add-group --description "Asterisk" asterisk
@@ -15,8 +13,8 @@
 #   ec2-authorize asterisk -P udp -p 5060
 #   ec2-authorize asterisk -P udp -p 10000-20000
 #   
-# Run the latest Ubuntu 8.04 Hardy AMI from http://alestic with the
-# 2.6.18 kernel (1000Hz timer) and include the "asterisk" security
+# Run the latest Ubuntu 8.04 Hardy AMI from http://alestic.com with
+# the 2.6.18 kernel (1000Hz timer) and include the "asterisk" security
 # group from above:
 #
 #   ec2-run-instances       \
@@ -31,7 +29,7 @@
 #  curl -Lo /mnt/install-asterisk http://ec2ubuntu-install-asterisk.notlong.com
 #  bash /mnt/install-asterisk
 #
-# Configure a softphone to point to your instance's public IP address.
+# Configure a softphone pointing to your instance's public IP address.
 #   username: 1234
 #   password: 1234
 #   domain: EC2 instance public IP
