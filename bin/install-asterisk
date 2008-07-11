@@ -71,7 +71,7 @@ exten => *98,1,VoiceMailMain
 exten => *98,2,Hangup
 EOEXTENSIONS
 
-  patch -d /etc/asterisk <<"EOPATCH"
+  patch -d /etc/asterisk <<EOPATCH
 --- /etc/asterisk/sip.conf.orig	2008-07-11 02:23:06.000000000 -0700
 +++ /etc/asterisk/sip.conf	2008-07-11 02:27:29.000000000 -0700
 @@ -72,8 +72,8 @@
