@@ -59,7 +59,7 @@ set -e
 
 # Build and install sample configuration
 
-  make install samples
+  make MENUSELECT_CORE_SOUNDS=CORE-SOUNDS-EN-WAV install samples
 
 # Configure a demo
 
