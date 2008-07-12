@@ -22,12 +22,12 @@
 #     --group default       \
 #     --group asterisk      \
 #     --kernel aki-9b00e5f2 \
-#     ami-6a57b203
+#     ami-26bc584f
 #
 # On the instance, download and run the latest version of this script:
 #
 #  curl -Lo /mnt/install-asterisk http://ec2ubuntu-install-asterisk.notlong.com
-#  bash /mnt/install-asterisk
+#  time bash /mnt/install-asterisk
 #
 # Configure a softphone pointing to your instance's public IP address.
 #   username: 1234
