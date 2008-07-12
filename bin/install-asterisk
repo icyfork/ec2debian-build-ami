@@ -61,7 +61,7 @@ set -e
 
   make MENUSELECT_CORE_SOUNDS=CORE-SOUNDS-EN-WAV install samples
 
-# Configure a demo
+# Configure a demo (*98 goes to voicemail)
 
   ipaddress=$(curl http://169.254.169.254/2008-02-01/meta-data/public-ipv4)
 
