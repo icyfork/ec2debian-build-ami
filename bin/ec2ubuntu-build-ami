@@ -66,6 +66,10 @@
 #
 # History:
 #
+#   2008-07-21 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to debootstrap 1.0.10
+#   - Output new ssh host keys to console log for security.
+#
 #   2008-07-03 Eric Hammond <ehammond@thinksome.com>
 #   - Split startup scripts into their own files and reorganize a bit.
 #
@@ -366,7 +370,7 @@ chmod 755 $imagedir/usr/sbin/policy-rc.d
 
 # Bootstrap Ubuntu
 BSURL=http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
-BSVER=debootstrap_1.0.9
+BSVER=debootstrap_1.0.10
 BSDIR=$(pwd)/debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
   tar xz
