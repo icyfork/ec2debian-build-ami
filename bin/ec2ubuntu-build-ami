@@ -66,6 +66,9 @@
 #
 # History:
 #
+#   2008-08-04 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to latest AMI tools 1.3-21885 20071010 (obviates 1 patches)
+#
 #   2008-07-21 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade to debootstrap 1.0.10
 #   - Output new ssh host keys to console log for security.
@@ -496,7 +499,7 @@ EOF
 
 # Install and patch Amazon AMI tools
 curl -s \
-  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-20041.noarch.rpm \
+  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-21885.noarch.rpm \
   > $imagedir/tmp/ec2-ami-tools.noarch.rpm
 chroot $imagedir alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm
 
@@ -532,18 +535,6 @@ chroot $imagedir patch -d /usr/lib/site_ruby/aes/amiutil <<'EOF'
 EOF
 
 chroot $imagedir patch -d /usr/lib/site_ruby/ec2/platform/base <<'EOF'
---- /usr/lib/site_ruby/ec2/platform/base/pipeline.rb.orig	2008-04-02 19:41:54.000000000 -0700
-+++ /usr/lib/site_ruby/ec2/platform/base/pipeline.rb	2008-04-02 19:47:17.000000000 -0700
-@@ -105,7 +105,8 @@
-           @results = []
-           create_tempfiles
-           
--          invocation = command
-+          # UGLY HACK for Ubuntu: Assumes no single quotes (') in command.
-+          invocation = "/bin/bash -c '" + command + "'"
-           
-           # Execute the pipeline invocation
-           STDERR.puts("Pipeline.execute: command = [#{invocation}]") if verbose
 EOF
 
 #TBD
