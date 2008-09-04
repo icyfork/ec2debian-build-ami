@@ -66,6 +66,9 @@
 #
 # History:
 #
+#   2008-09-04 Eric Hammond <ehammond@thinksome.com>
+#   - Fix ec2-ssh-host-key-gen to not run on reboot.
+#
 #   2008-08-04 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade to latest AMI tools 1.3-21885 20071010 (obviates 1 patch)
 #

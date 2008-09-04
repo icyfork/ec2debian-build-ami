@@ -16,4 +16,4 @@ ssh-keygen -l -f /etc/ssh/ssh_host_dsa_key.pub    | logger -st "ec2"
 echo "-----END SSH HOST KEY FINGERPRINTS-----"    | logger -st "ec2" 
 
 # Prevent us from running on the next boot
-chmod -x /etc/init.d/$prog
+chmod -x $0
