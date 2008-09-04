@@ -54,3 +54,7 @@ perl -MIO::Socket::INET -e "
  until(new IO::Socket::INET(q{169.254.169.254:80})){print qq{Waiting for network...\n};sleep 1}
 " | logger -t $0
 }}' /etc/init.d/rightscale
+
+# Things RightScale expects (probably CentOS related)
+mkdir -p /var/lock/subsys
+mkdir -p /etc/pki/rpm-gpg
