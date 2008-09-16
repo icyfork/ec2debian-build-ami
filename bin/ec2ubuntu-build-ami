@@ -67,6 +67,12 @@
 #
 # History:
 #
+#   2008-09-16 Eric Hammond <ehammond@thinksome.com>
+#   - Changes based on ideas from yourabi:
+#   - Add --no-run-user-data option.
+#   - Do not purge patch and alien as this would remove build-essential.
+#   - Export $distribution to external scripts.
+#
 #   2008-09-04 Eric Hammond <ehammond@thinksome.com>
 #   - Fix ec2-ssh-host-key-gen to not run on reboot.
 #
