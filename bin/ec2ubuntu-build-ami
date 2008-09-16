@@ -631,9 +631,9 @@ for script in "${scripts[@]}"; do
 done
 
 # cleanup
-if [ "$codename" != "dapper" -a "$codename" != "etch" ]; then
-  chroot $imagedir apt-get -y autoremove --purge patch alien
-fi
+#if [ "$codename" != "dapper" -a "$codename" != "etch" ]; then
+#  chroot $imagedir apt-get -y autoremove --purge patch alien
+#fi
 chroot $imagedir apt-get clean
 rm -f  $imagedir/usr/sbin/policy-rc.d
 rm -rf /var/log/{bootstrap,dpkg}.log /var/cache/apt/*.bin /var/lib/apt/lists/
