@@ -610,9 +610,10 @@ if [ "$desktop" = "nx" ]; then
 fi
 
 # Export build parameters so they are available in external scripts
-export release codename tag bucket prefix timezone locale charmap size \
-  scripts packages modules desktop builddir imagedir bundlearch AWS_USER_ID \
-  AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY EC2_PRIVATE_KEY EC2_CERT
+export distribution release codename tag bucket prefix \
+  timezone locale charmap size scripts packages modules desktop \
+  builddir imagedir bundlearch \
+  AWS_USER_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY EC2_PRIVATE_KEY EC2_CERT
 
 # Invoke external scripts/commands if requested
 for script in "${scripts[@]}"; do
