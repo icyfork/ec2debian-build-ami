@@ -28,6 +28,7 @@
 #    --locale LOCALE       - Defaults to en_US
 #    --charmap CHARMAP     - Defaults to UTF-8
 #    --size MB             - Root partition size in megabytes
+#    --no-run-user-data    - Do not run user-data script on first boot
 #    --package NAME        - Additional Ubuntu package to install
 #    --script FILE         - External script/command to run before bundle
 #    --modules "URL1 URL2" - Kernel modules to download and install
@@ -232,6 +233,7 @@ while [ $# -gt 0 ]; do
     --locale)      locale=$2;                           shift 2 ;;
     --charmap)     charmap=$2;                          shift 2 ;;
     --size)        size=$2;                             shift 2 ;;
+    --no-run-user-data) no_run_user_data=1              ;;
     --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
@@ -568,7 +570,9 @@ install_init ec2-killall-nash-hotplug 00 "S"
 install_init ec2-mkdir-tmp            36 "S"
 install_init ec2-ssh-host-key-gen     50 "S"
 install_init ec2-get-credentials      70 "2 3 4 5"
-install_init ec2-run-user-data        71 "2 3 4 5"
+if [ ! $no_run_user_data ]; then
+  install_init ec2-run-user-data        71 "2 3 4 5"
+fi
 
 # Inside Xen, CMOS clock is irrelevant, so save seconds at boot
 /bin/rm -f $imagedir/etc/rc?.d/*hwclock*
