@@ -34,6 +34,7 @@
 #    --modules "URL1 URL2" - Kernel modules to download and install
 #    --desktop nx          - Takes longer and makes AMI much bigger
 #    --builddir DIR        - Build directory [default: /mnt/build]
+#    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol
 #
 #    It is ok to specify multiple --package and --script options.
 #    It is ok to specify a quoted command for the --script option.
@@ -68,8 +69,10 @@
 # History:
 #
 #   2008-09-16 Eric Hammond <ehammond@thinksome.com>
-#   - Changes based on ideas from justnull:
+#   - Changes based on ideas from justnulling:
 #   - Run depmod for all installed kernel module versions
+#   - Add --bundle-opts option
+#   - Cleanup the correct cache/log files in the image
 #
 #   2008-09-16 Eric Hammond <ehammond@thinksome.com>
 #   - Changes based on ideas from yourabi:
@@ -249,6 +252,7 @@ while [ $# -gt 0 ]; do
     --modules)     modules=$2;                          shift 2 ;;
     --desktop)     desktop=$2;                          shift 2 ;;
     --builddir)    builddir=$2;                         shift 2 ;;
+    --bundle-opts) bundle_vol_options=$2                shift 2 ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
 done
@@ -647,9 +651,12 @@ done
 #  chroot $imagedir apt-get -y autoremove --purge patch alien
 #fi
 chroot $imagedir apt-get clean
-rm -f  $imagedir/usr/sbin/policy-rc.d
-rm -rf /var/log/{bootstrap,dpkg}.log /var/cache/apt/*.bin /var/lib/apt/lists/
-rm -rf $imagedir/tmp/* $imagedir/root/.bash_history
+rm -f  $imagedir/usr/sbin/policy-rc.d         \
+       $imagedir/var/log/{bootstrap,dpkg}.log \
+       $imagedir/var/cache/apt/*.bin          \
+       $imagedir/var/lib/apt/lists            \
+       $imagedir/tmp/* $imagedir/root/.bash_history
+mkdir -p $imagedir/var/lib/apt/lists/partial
 
 # Bundle & upload to S3
 cp $EC2_PRIVATE_KEY $imagedir/tmp/pk.pem
@@ -663,7 +670,8 @@ chroot $imagedir ec2-bundle-vol         \
   -k /tmp/pk.pem                        \
   -c /tmp/cert.pem                      \
   -s $size                              \
-  -e /tmp
+  -e /tmp                               \
+  $bundle_vol_options
 
 ec2-upload-bundle                       \
   --retry                               \
