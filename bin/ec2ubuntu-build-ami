@@ -68,6 +68,10 @@
 # History:
 #
 #   2008-09-16 Eric Hammond <ehammond@thinksome.com>
+#   - Changes based on ideas from justnull:
+#   - Run depmod for all installed kernel module versions
+#
+#   2008-09-16 Eric Hammond <ehammond@thinksome.com>
 #   - Changes based on ideas from yourabi:
 #   - Add --no-run-user-data option.
 #   - Do not purge patch and alien as this would remove build-essential.
@@ -470,11 +474,13 @@ if [ "$desktop" -a "$distribution" = "debian" ]; then
 fi
 unset DEBIAN_FRONTEND
 
-# EC2 kernel modules
+# Install kernel modules
 for module in $modules; do
   curl -s $module | tar xzC $imagedir
 done
-chroot $imagedir depmod -a
+for module_version in $(cd $imagedir/lib/modules; ls); do
+  chroot $imagedir depmod -a $module_version
+done
 
 # Xen expects a single tty1
 /bin/rm -f $imagedir/etc/event.d/tty[2-6]
