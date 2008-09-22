@@ -246,7 +246,7 @@ while [ $# -gt 0 ]; do
     --locale)      locale=$2;                           shift 2 ;;
     --charmap)     charmap=$2;                          shift 2 ;;
     --size)        size=$2;                             shift 2 ;;
-    --no-run-user-data) no_run_user_data=1              ;;
+    --no-run-user-data) no_run_user_data=1              shift ;;
     --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
@@ -454,13 +454,14 @@ if [ "$bundlearch" = "i386" ]; then
   if [ "$codename" = "edgy"   -o \
        "$codename" = "feisty" -o \
        "$codename" = "gutsy"  -o \
+       "$codename" = "hardy"  -o \
        "$distribution" = "debian" ]; then
     chroot $imagedir apt-get install -y libc6-xen
   fi
-  if [ "$codename" = "hardy" ]; then
-    # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
-    rm -rf $imagedir/lib/tls
-  fi
+#  if [ "$codename" = "hardy" ]; then
+#    # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
+#    rm -rf $imagedir/lib/tls
+#  fi
 else
   chroot $imagedir apt-get install -y ia32-libs
 fi
