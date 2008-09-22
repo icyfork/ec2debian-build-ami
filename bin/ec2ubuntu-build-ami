@@ -454,14 +454,13 @@ if [ "$bundlearch" = "i386" ]; then
   if [ "$codename" = "edgy"   -o \
        "$codename" = "feisty" -o \
        "$codename" = "gutsy"  -o \
-       "$codename" = "hardy"  -o \
        "$distribution" = "debian" ]; then
     chroot $imagedir apt-get install -y libc6-xen
   fi
-#  if [ "$codename" = "hardy" ]; then
-#    # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
-#    rm -rf $imagedir/lib/tls
-#  fi
+  if [ "$codename" = "hardy" ]; then
+    # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
+    rm -rf $imagedir/lib/tls
+  fi
 else
   chroot $imagedir apt-get install -y ia32-libs
 fi
