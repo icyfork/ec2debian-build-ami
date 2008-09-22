@@ -246,7 +246,7 @@ while [ $# -gt 0 ]; do
     --locale)      locale=$2;                           shift 2 ;;
     --charmap)     charmap=$2;                          shift 2 ;;
     --size)        size=$2;                             shift 2 ;;
-    --no-run-user-data) no_run_user_data=1              shift ;;
+    --no-run-user-data) no_run_user_data=1;             shift ;;
     --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
