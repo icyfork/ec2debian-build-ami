@@ -69,6 +69,10 @@
 # History:
 #
 #   2008-09-16 Eric Hammond <ehammond@thinksome.com>
+#   - Changes based on ideas from Hans Omli:
+#   - Hardy and Intrepid now install libc6-xen (and remove libc6-i686)
+#
+#   2008-09-16 Eric Hammond <ehammond@thinksome.com>
 #   - Changes based on ideas from justnulling:
 #   - Run depmod for all installed kernel module versions
 #   - Add --bundle-opts option
@@ -451,15 +455,9 @@ chroot $imagedir apt-get update
 
 # Architecture/release specific instructions
 if [ "$bundlearch" = "i386" ]; then
-  if [ "$codename" = "edgy"   -o \
-       "$codename" = "feisty" -o \
-       "$codename" = "gutsy"  -o \
-       "$distribution" = "debian" ]; then
+  if [ "$codename" != "dapper" ]; then
     chroot $imagedir apt-get install -y libc6-xen
-  fi
-  if [ "$codename" = "hardy" ]; then
-    # tls seems to have a bug on hardy: perl -e 'glob("xxx*")'
-    rm -rf $imagedir/lib/tls
+    chroot $imagedir apt-get remove  -y libc6-i686 || true
   fi
 else
   chroot $imagedir apt-get install -y ia32-libs
