@@ -68,6 +68,10 @@
 #
 # History:
 #
+#   2008-09-23 Eric Hammond <ehammond@thinksome.com>
+#   - Garrett Smith pointed out that the latest ec2-bundle-vol
+#     requires --generate-fstab
+#
 #   2008-09-16 Eric Hammond <ehammond@thinksome.com>
 #   - Changes based on ideas from Hans Omli:
 #   - Hardy and Intrepid now install libc6-xen (and remove libc6-i686)
@@ -670,6 +674,7 @@ chroot $imagedir ec2-bundle-vol         \
   -c /tmp/cert.pem                      \
   -s $size                              \
   -e /tmp                               \
+  --generate-fstab                      \
   $bundle_vol_options
 
 ec2-upload-bundle                       \
