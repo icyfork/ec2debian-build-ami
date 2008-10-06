@@ -68,6 +68,9 @@
 #
 # History:
 #
+#   2008-10-06 Eric Hammond <ehammond@thinksome.com>
+#   - Remove apparmor which will not work on older kernels.
+#
 #   2008-10-02 Eric Hammond <ehammond@thinksome.com>
 #   - Add 'hwcap 0 nosegneg' to /etc/ld.so.conf.d/libc6-xen.conf
 #     Thanks to research by Eric Mason
@@ -479,6 +482,7 @@ ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
 chroot $imagedir apt-get -y upgrade
 export DEBIAN_FRONTEND=noninteractive
 chroot $imagedir apt-get install -y $packages
+chroot $imagedir apt-get remove -y apparmor apparmor-utils || true
 if [ "$desktop" -a "$distribution" = "debian" ]; then
   chroot $imagedir aptitude install -y desktop gnome
   chroot $imagedir aptitude install -y desktop kde
