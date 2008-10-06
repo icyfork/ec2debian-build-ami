@@ -466,7 +466,7 @@ if [ "$bundlearch" = "i386" ]; then
     chroot $imagedir apt-get install -y libc6-xen
     echo 'hwcap 0 nosegneg' > $imagedir/etc/ld.so.conf.d/libc6-xen.conf
     chroot $imagedir ldconfig
-    chroot $imagedir apt-get remove  -y libc6-i686 || true
+    chroot $imagedir apt-get remove -y libc6-i686 || true
   fi
 else
   chroot $imagedir apt-get install -y ia32-libs
