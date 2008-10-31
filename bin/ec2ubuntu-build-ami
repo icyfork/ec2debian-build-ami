@@ -68,6 +68,9 @@
 #
 # History:
 #
+#   2008-10-31 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade desktop to latest version of NX Free Edition software
+#
 #   2008-10-06 Eric Hammond <ehammond@thinksome.com>
 #   - Remove apparmor which will not work on older kernels.
 #
@@ -619,13 +622,13 @@ fi
 # Are we installing the desktop with NoMachine NX?
 if [ "$desktop" = "nx" ]; then
   if [ "$bundlearch" = "i386" ]; then
-    nxclient_pkg="nxclient_3.2.0-9_i386.deb"
-    nxnode_pkg="nxnode_3.2.0-11_i386.deb"
-    nxserver_pkg="nxserver_3.2.0-13_i386.deb"
+    nxclient_pkg="nxclient_3.2.0-14_i386.deb"
+    nxnode_pkg="nxnode_3.2.0-13_i386.deb"
+    nxserver_pkg="nxserver_3.2.0-16_i386.deb"
   else
-    nxclient_pkg="nxclient_3.2.0-9_x86_64.deb"
-    nxnode_pkg="nxnode_3.2.0-11_x86_64.deb"
-    nxserver_pkg="nxserver_3.2.0-13_x86_64.deb"
+    nxclient_pkg="nxclient_3.2.0-14_x86_64.deb"
+    nxnode_pkg="nxnode_3.2.0-13_x86_64.deb"
+    nxserver_pkg="nxserver_3.2.0-16_x86_64.deb"
   fi
 
   curl -o $imagedir/tmp/$nxclient_pkg \
