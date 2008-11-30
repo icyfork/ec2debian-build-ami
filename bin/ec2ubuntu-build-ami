@@ -628,11 +628,11 @@ if [ "$desktop" = "nx" ]; then
   fi
 
   curl -o $imagedir/tmp/$nxclient_pkg \
-    http://64.34.161.181/download/3.2.0/Linux/$nxclient_pkg
+    http://64.34.161.181/download/3.3.0/Linux/$nxclient_pkg
   curl -o $imagedir/tmp/$nxnode_pkg \
-    http://64.34.161.181/download/3.2.0/Linux/$nxnode_pkg
+    http://64.34.161.181/download/3.3.0/Linux/$nxnode_pkg
   curl -o $imagedir/tmp/$nxserver_pkg \
-    http://64.34.161.181/download/3.2.0/Linux/FE/$nxserver_pkg
+    http://64.34.161.181/download/3.3.0/Linux/FE/$nxserver_pkg
 
   chroot $imagedir dpkg -i /tmp/$nxclient_pkg
   chroot $imagedir dpkg -i /tmp/$nxnode_pkg
