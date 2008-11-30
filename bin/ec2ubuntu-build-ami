@@ -427,7 +427,7 @@ EOF
 chmod 755 $imagedir/usr/sbin/policy-rc.d
 
 # Bootstrap Ubuntu
-BSURL=http://archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
+BSURL=http://us.archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
 BSVER=debootstrap_1.0.10
 BSDIR=$(pwd)/debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
@@ -554,7 +554,7 @@ EOF
 if [ "$codename" = "intrepid" ]; then
   chroot $imagedir apt-get install -y ec2-ami-tools
 else 
-  curl -s http://archive.ubuntu.com/ubuntu/pool/multiverse/e/ec2-ami-tools/ec2-ami-tools_1.3-26357-0ubuntu5_$bsarch.deb > $imagedir/tmp/ec2-ami-tools.deb
+  curl -s http://us.archive.ubuntu.com/ubuntu/pool/multiverse/e/ec2-ami-tools/ec2-ami-tools_1.3-26357-0ubuntu5_$bsarch.deb > $imagedir/tmp/ec2-ami-tools.deb
   chroot $imagedir dpkg -i /tmp/ec2-ami-tools.deb
 fi
 
