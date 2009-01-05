@@ -67,6 +67,9 @@
 #
 # History:
 #
+#   2009-01-05 Viele Grüße
+#   - Fix for --locale option
+#
 #   2008-11-26 Eric Hammond <ehammond@thinksome.com>
 #   - Add support for building Ubuntu 9.04 "jaunty" images
 #   - Upgrade EC2 AMI tools to 1.3-30748 20071010
@@ -461,7 +464,7 @@ chroot $imagedir apt-get -f install -y
 # Set locale
 chroot $imagedir apt-get install -y --force-yes locales # for Debian
 chroot $imagedir localedef -c --inputfile=$locale --charmap=$charmap $locale.$charmap
-echo "LANG=\"$LANG\""  >$imagedir/etc/default/locale
+echo "LANG=\"$locale.$charmap\""  >$imagedir/etc/default/locale
 
 # Set timezone
 echo $timezone >$imagedir/etc/timezone
