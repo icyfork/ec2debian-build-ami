@@ -131,3 +131,47 @@ EOEXTENSIONS
 +qualify=yes
 EOPATCH
 
+exit
+
+
+DeStar
+
+http://destar.berlios.de/
+http://www.justuber.com/blog/2008/06/13/asterisk-and-destar-on-ubuntu-hardy/
+
+
+
+apt-get install -y asterisk destar python2.4
+
+
+vi /usr/share/destar/python/destar.py
+
+Replace
+  #!/usr/bin/env python
+with
+  #!/usr/bin/env python2.4
+
+destar --port=80 --daemonize
+
+Look for secret in /etc/asterisk/destar_cfg.py
+CfgOptManager(
+        name     = "destarman",
+        secret   = "9fYMbomD",
+        read     = ",system,call,log,verbose,command,agent,user",
+        )
+
+password=9fYMbomD
+
+cat > /etc/asterisk/manager.d/destar.conf <<EOCONF
+[destarman]
+secret=$password
+deny=0.0.0.0/0.0.0.0
+permit=127.0.0.1/255.255.255.0
+read=,system,call,log,verbose,command,agent,user
+write=,system,call,log,verbose,command,agent,user
+EOCONF
+
+http://HOST/
+
+username: admin
+password: ad26.  (yes, with a period)

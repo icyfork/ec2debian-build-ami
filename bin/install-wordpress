@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# install-wordpress
+#
+set -e
+set -x
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update && apt-get upgrade -y
+tasksel install lamp-server
+apt-get install -y wordpress php5-gd
+sudo sh /usr/share/doc/wordpress/examples/setup-mysql
+host=$(wget -qO- http://169.254.169.254/2007-12-15/meta-data/public-hostname/)
+bash /usr/share/doc/wordpress/examples/setup-mysql -n wordpress $host
+mv /var/www /var/www.orig
+ln -s /usr/share/wordpress /var/www
+/etc/init.d/apache2 restart
+
+echo "Please remember to set the MySQL root password!"
+echo "Configure WordPress at http://$host/"
