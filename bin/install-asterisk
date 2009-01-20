@@ -160,7 +160,7 @@ CfgOptManager(
         read     = ",system,call,log,verbose,command,agent,user",
         )
 
-password=9fYMbomD
+password=[yourpassword]
 
 cat > /etc/asterisk/manager.d/destar.conf <<EOCONF
 [destarman]
