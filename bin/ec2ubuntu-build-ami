@@ -34,7 +34,7 @@
 #    --desktop nx          - Takes longer and makes AMI much bigger
 #    --builddir DIR        - Build directory [default: /mnt/build]
 #    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol
-#    --location            - AWS location, defaults to US
+#    --location US/EU      - AWS location [default: US]
 #
 #    It is ok to specify multiple --package and --script options.
 #    It is ok to specify a quoted command for the --script option.
@@ -379,13 +379,13 @@ if [ "$bsarch" = "" ]; then
 fi
 
 echo Building AMI for $distribution $release $codename
-echo locale:         $locale
-echo charmap:        $charmap
-echo location:       $location
-echo timezone:       $timezone
-echo Image size:     ${size} MB
-echo Uploading to:   $bucket/$prefix
-echo Packages:       $packages
+echo locale:       $locale
+echo charmap:      $charmap
+echo location:     $location
+echo timezone:     $timezone
+echo Image size:   ${size} MB
+echo Uploading to: $bucket/$prefix
+echo Packages:     $packages
 
 set -e
 set -x
