@@ -9,7 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get upgrade -y
 tasksel install lamp-server
 apt-get install -y wordpress php5-gd
-sudo sh /usr/share/doc/wordpress/examples/setup-mysql
+sh /usr/share/doc/wordpress/examples/setup-mysql
 host=$(wget -qO- http://169.254.169.254/2007-12-15/meta-data/public-hostname/)
 bash /usr/share/doc/wordpress/examples/setup-mysql -n wordpress $host
 mv /var/www /var/www.orig
