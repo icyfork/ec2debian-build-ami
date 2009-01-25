@@ -34,6 +34,7 @@
 #    --desktop nx          - Takes longer and makes AMI much bigger
 #    --builddir DIR        - Build directory [default: /mnt/build]
 #    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol
+#    --location            - AWS location, defaults to US
 #
 #    It is ok to specify multiple --package and --script options.
 #    It is ok to specify a quoted command for the --script option.
@@ -66,6 +67,11 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#   2009-01-15 Jim Dixon <jddixon@gmail.com>
+#   - Added --location option, defaulting to US
+#   - Wrapped loading of external scripts in DEBIAN_FRONTEND=noninteractive
+#   - Still problem handling en_GB and en_UK locales (Ubuntu problem? Perl?)
+#   - As of this date bucket name must be all lower case (bug in ami-tools)
 #
 #   2009-01-05 Dietmar Scharf
 #   - Fix for --locale option
@@ -286,6 +292,7 @@ while [ $# -gt 0 ]; do
     --desktop)     desktop=$2;                          shift 2 ;;
     --builddir)    builddir=$2;                         shift 2 ;;
     --bundle-opts) bundle_vol_options=$2;               shift 2 ;;
+    --location)    location=$2;                         shift 2 ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
 done
@@ -341,6 +348,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
+     ${location:=US} \
      ${tag:=custom} ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
      ${builddir:=/mnt/build}
 
@@ -371,12 +379,13 @@ if [ "$bsarch" = "" ]; then
 fi
 
 echo Building AMI for $distribution $release $codename
-echo locale:       $locale
-echo charmap:      $charmap
-echo timezone:     $timezone
-echo Image size:   ${size} MB
-echo Uploading to: $bucket/$prefix
-echo Packages:     $packages
+echo locale:         $locale
+echo charmap:        $charmap
+echo location:       $location
+echo timezone:       $timezone
+echo Image size:     ${size} MB
+echo Uploading to:   $bucket/$prefix
+echo Packages:       $packages
 
 set -e
 set -x
@@ -664,6 +673,7 @@ export distribution release codename tag bucket prefix \
   AWS_USER_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY EC2_PRIVATE_KEY EC2_CERT
 
 # Invoke external scripts/commands if requested
+export DEBIAN_FRONTEND=noninteractive
 for script in "${scripts[@]}"; do
   if [ -x "$script" ]; then
     "$script"
@@ -673,7 +683,7 @@ for script in "${scripts[@]}"; do
     eval $script
   fi
 done
-
+unset DEBIAN_FRONTEND
 # cleanup
 #if [ "$codename" != "dapper" -a "$codename" != "etch" ]; then
 #  chroot $imagedir apt-get -y autoremove --purge patch alien
@@ -708,7 +718,8 @@ ec2-upload-bundle                       \
   -b $bucket                            \
   -m $imagedir/tmp/$prefix.manifest.xml \
   -a $AWS_ACCESS_KEY_ID                 \
-  -s $AWS_SECRET_ACCESS_KEY
+  -s $AWS_SECRET_ACCESS_KEY             \
+  --location $location 
 
 umount $imagedir/dev/pts
 umount $imagedir/proc || true
