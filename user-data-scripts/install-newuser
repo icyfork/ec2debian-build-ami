@@ -1,0 +1,9 @@
+#!/bin/bash
+
+user=myuser
+cp ~ubuntu/.ssh/authorized_keys /tmp/
+deluser --remove-home ubuntu
+adduser --disabled-password --gecos "$user" $user
+mkdir -p -m 0700 /home/$user/.ssh
+mv /tmp/authorized_keys /home/$user/.ssh/
+chown -R $user.$user /home/$user/.ssh
