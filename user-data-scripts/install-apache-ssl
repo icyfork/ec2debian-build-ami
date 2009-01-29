@@ -10,7 +10,7 @@ set -e
 set -x
 
 # Apache SSL setup. Assumes Apache is already installed with default config.
-
+export DEBIAN_FRONTEND=noninteractive
 apt-get install -y ssl-cert patch
 
 mkdir -p /etc/apache2/ssl

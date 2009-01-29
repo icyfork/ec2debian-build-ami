@@ -41,6 +41,7 @@ set -e
 
 # Required packages
 
+  export DEBIAN_FRONTEND=noninteractive
   apt-get install -y libc6-dev g++ gcc libncurses-dev make subversion patch
 
 # Build Asterisk from source

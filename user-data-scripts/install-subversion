@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# install-subversion
+#
+# Run an Ubuntu AMI from http://alestic.com with this as the
+# user-data-file
+#
+#   ec2-run-instances \
+#      --user-data-file install-subversion \
+#      --key KEYPAIR \
+#      AMIID
+#
+# Wait a few minutes and check out the repository back on your local
+# system:
+#
+#   host=ec2-...
+#   export SVN_SSH='/usr/bin/ssh -i KEYPAIR.pem'
+#   svn checkout svn+ssh://root@$host/srv/svn/REPOSITORY
+#
+# CAVEAT!
+#
+#   This puts the subversion repository on ephemeral storage which will
+#   vanish when the instance terminates or crashes.  You should move it
+#   to the safety of an EBS volume with regular EBS snapshots.
+#
+
+set -e
+set -x
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get upgrade -y
+apt-get install -y subversion
+mkdir -p /srv/svn
+svnadmin create /srv/svn/REPOSITORY

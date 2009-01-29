@@ -9,7 +9,7 @@ set -e
 set -x
 
 # Skip prompt for the MySQL root password
-export DEBIAN_PRIORITY=critical
+export DEBIAN_FRONTEND=noninteractive
 
 # Install packages.
 apt-get install -y mediawiki imagemagick mediawiki-math mysql-server
