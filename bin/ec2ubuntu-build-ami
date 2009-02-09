@@ -67,6 +67,10 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#   2009-02-09 Terry Jones
+#   - Script hooks are run from within original directory
+#   - Non-zero exit from scripts cause failure of entire build
+#
 #   2009-01-15 Jim Dixon <jddixon@gmail.com>
 #   - Added --location option, defaulting to US
 #   - Wrapped loading of external scripts in DEBIAN_FRONTEND=noninteractive
@@ -264,6 +268,7 @@
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
 svnpath=http://ec2ubuntu.googlecode.com/svn-history/r99
+originaldir=$(/bin/pwd)
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien"
 
@@ -675,19 +680,31 @@ export distribution release codename tag bucket prefix \
 # Invoke external scripts/commands if requested
 export DEBIAN_FRONTEND=noninteractive
 for script in "${scripts[@]}"; do
+  cd "$original_dir"
+  status=
   if [ -x "$script" ]; then
     "$script"
+    status=$?
   elif [ -f "$script" ]; then
     /bin/bash "$script"
+    status=$?
   else
     eval $script
   fi
+
+  if [ -n "$status" -a "$status" -ne 0 ]; then
+    echo "Execution of '$script' failed with status $status" >&2
+    exit $status
+  fi
 done
 unset DEBIAN_FRONTEND
+cd $builddir
+
 # cleanup
 #if [ "$codename" != "dapper" -a "$codename" != "etch" ]; then
 #  chroot $imagedir apt-get -y autoremove --purge patch alien
 #fi
+
 chroot $imagedir apt-get clean
 rm -rf $imagedir/usr/sbin/policy-rc.d         \
        $imagedir/var/log/{bootstrap,dpkg}.log \
