@@ -20,8 +20,8 @@
 #    --private-key PATH    - Defaults to $EC2_PRIVATE_KEY
 #    --cert PATH           - Defaults to $EC2_CERT
 #    --distribution NAME   - ubuntu                             debian
-#    --codename NAME       - dapper gutsy hardy intrepid jaunty etch lenny 
-#    --release VERSION     - 6.06   7.10  8.04  8.10     9.04   4.0  5.0
+#    --codename NAME    - dapper gutsy hardy intrepid jaunty etch lenny squeeze 
+#    --release VERSION  - 6.06   7.10  8.04  8.10     9.04   4.0  5.0   6.0
 #    --arch ARCHITECTURE   - i386 amd64 - Defaults to the architecture of the running kernel
 #    --timezone ZONE       - Defaults to UTC
 #    --locale LOCALE       - Defaults to en_US
@@ -317,6 +317,7 @@ if [ "$release" = "" ]; then
     jaunty)   release=9.04     ;;
     etch)     release=4.0      ;;
     lenny)    release=5.0      ;;
+    squeeze)  release=6.0      ;;
     sid)      release=unstable ;;
     *)        echo "$0: Unrecognized codename: $codename" >&2; exit 1;
   esac
@@ -335,8 +336,8 @@ fi
 
 if [ "$distribution" = "" ]; then
   case $codename in
-    dapper|edgy|feisty|gutsy|hardy|intrepid|jaunty) distribution=ubuntu ;;
-    hamm|slink|potato|woody|sarge|etch|lenny|sid)   distribution=debian ;;
+    dapper|edgy|feisty|gutsy|hardy|intrepid|jaunty)       distribution=ubuntu ;;
+    hamm|slink|potato|woody|sarge|etch|lenny|squeeze|sid) distribution=debian ;;
     *)     echo "$0: Unrecognized codename: $codename" >&2; exit 1;
   esac
 fi
@@ -461,7 +462,7 @@ ar p /tmp/${BSVER}_all.deb data.tar.gz |
   tar xvzOf - ./usr/share/debootstrap/devices.tar.gz > $BSDIR/devices.tar.gz
 case "$codename" in
   hardy|intrepid|jaunty) ln -s gutsy $BSDIR/scripts/ubuntu/$codename ;;
-  lenny|etch)            ln -s sid   $BSDIR/scripts/debian/$codename ;;
+  etch|lenny|squeeze)    ln -s sid   $BSDIR/scripts/debian/$codename ;;
 esac
 (cd $BSDIR/scripts ; ln -s */$codename $codename)
 export DEBOOTSTRAP_DIR=$BSDIR
@@ -491,6 +492,12 @@ if [ "$distribution" = "debian" ]; then
 deb http://http.us.debian.org/debian   $codename         main contrib non-free
 #deb http://non-us.debian.org/debian-non-US stable/non-US main contrib non-free
 deb http://security.debian.org         $codename/updates main contrib non-free
+EOF
+elif [ "$codename" = "hardy" -o "$codename" = "intrepid" ]; then
+  cat <<EOF >$imagedir/etc/apt/sources.list
+deb http://ec2-us-east-mirror.rightscale.com/ubuntu $codename main restricted universe multiverse
+deb http://ec2-us-east-mirror.rightscale.com/ubuntu $codename-updates main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
 EOF
 else
   cat <<EOF >$imagedir/etc/apt/sources.list
