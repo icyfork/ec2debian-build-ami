@@ -67,6 +67,10 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2009-02-15 Eric Hammond <ehammond@thinksome.com>
+#   - Added support for Debian squeeze
+#   
 #   2009-02-09 Terry Jones
 #   - Script hooks are run from within original directory
 #   - Non-zero exit from scripts cause failure of entire build
