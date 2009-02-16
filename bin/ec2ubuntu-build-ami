@@ -69,7 +69,8 @@
 # History:
 #
 #   2009-02-15 Eric Hammond <ehammond@thinksome.com>
-#   - Added support for Debian squeeze
+#   - Hardy and Intrepid use Ubuntu mirrors on EC2 provided by RightScale
+#   - Added support for Debian "squeeze"
 #   
 #   2009-02-09 Terry Jones
 #   - Script hooks are run from within original directory
@@ -506,13 +507,8 @@ EOF
 else
   cat <<EOF >$imagedir/etc/apt/sources.list
 deb http://us.archive.ubuntu.com/ubuntu $codename main restricted universe multiverse
-deb-src http://us.archive.ubuntu.com/ubuntu $codename main restricted universe multiverse
-
 deb http://us.archive.ubuntu.com/ubuntu $codename-updates main restricted universe multiverse
-deb-src http://us.archive.ubuntu.com/ubuntu $codename-updates main restricted universe multiverse
-
 deb http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
-deb-src http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
 EOF
 fi
 
