@@ -9,7 +9,10 @@ set -x
 # Skip prompt for the MySQL root password
 export DEBIAN_FRONTEND=noninteractive
 
+# Upgrade
+apt-get update && apt-get update -y
+
 # Install packages.
-apt-get install -y lamp-server^
+tasksel install lamp-server
 
 echo "Please remember to set the MySQL root password!"
