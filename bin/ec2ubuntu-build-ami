@@ -69,8 +69,9 @@
 # History:
 #
 #   2009-04-10 Eric Hammond <ehammond@thinksome.com>
-#   - Leave PasswordAuthentication enabled on desktop builds for NX auth.
+#   - Leave PasswordAuthentication enabled on desktop builds for NX auth
 #   - Upgrade desktop to latest 3.3.0 versions of NX Free Edition software
+#   - Pre-load xfs.ko kernel module to avoid some problems
 #
 #   2009-04-06 Eric Hammond <ehammond@thinksome.com>
 #   - Default to "PasswordAuthentication no" in /etc/ssh/sshd_config
@@ -564,6 +565,8 @@ if [ $bsarch = 'i386' ]; then
   case "$codename" in intrepid|jaunty|lenny|squeeze)
     curl -s -o $imagedir/lib/modules/2.6.21.7-2.fc8xen/kernel/fs/xfs/xfs.ko \
       http://alestic-downloads.s3.amazonaws.com/linux-fs-modules-build-2.6.21.7-2.fc8xen-xfs.ko
+    # Having this already loaded helps avoid kernel freeze after XFS mount.
+    echo "xfs" >> $imagedir/etc/modules
     ;;
   esac
 fi
