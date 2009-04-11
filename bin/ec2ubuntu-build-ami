@@ -68,7 +68,15 @@
 #
 # History:
 #
-#   2009-02-15 Eric Hammond <ehammond@thinksome.com>
+#   2009-04-10 Eric Hammond <ehammond@thinksome.com>
+#   - Leave PasswordAuthentication enabled on desktop builds for NX auth.
+#   - Upgrade desktop to latest 3.3.0 versions of NX Free Edition software
+#
+#   2009-04-06 Eric Hammond <ehammond@thinksome.com>
+#   - Default to "PasswordAuthentication no" in /etc/ssh/sshd_config
+#     at the request of Amazon Web Services security team.
+#
+#   2009-04-05 Eric Hammond <ehammond@thinksome.com>
 #   - Install XFS kernel module to match Amazon's 2.6.21fc8 kernel
 #     Fixes XFS bug on Lenny, Intrepid and above http://ec2xfs-fix.notlong.com
 #
@@ -570,6 +578,10 @@ done
 # Security
 chroot $imagedir shadowconfig on
 chroot $imagedir passwd -d root
+if [ ! "$desktop" ]; then
+  perl -pi -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
+    $imagedir/etc/ssh/sshd_config
+fi
 
 # Basic networking
 cat <<'EOF' >$imagedir/etc/network/interfaces
@@ -672,13 +684,13 @@ fi
 # Are we installing the desktop with NoMachine NX?
 if [ "$desktop" = "nx" ]; then
   if [ "$bundlearch" = "i386" ]; then
-    nxclient_pkg="nxclient_3.3.0-3_i386.deb"
-    nxnode_pkg="nxnode_3.3.0-3_i386.deb"
-    nxserver_pkg="nxserver_3.3.0-8_i386.deb"
+    nxclient_pkg="nxclient_3.3.0-6_i386.deb"
+    nxnode_pkg="nxnode_3.3.0-17_i386.deb"
+    nxserver_pkg="nxserver_3.3.0-22_i386.deb"
   else
-    nxclient_pkg="nxclient_3.3.0-3_x86_64.deb"
-    nxnode_pkg="nxnode_3.3.0-3_x86_64.deb"
-    nxserver_pkg="nxserver_3.3.0-8_x86_64.deb"
+    nxclient_pkg="nxclient_3.3.0-6_x86_64.deb"
+    nxnode_pkg="nxnode_3.3.0-17_x86_64.deb"
+    nxserver_pkg="nxserver_3.3.0-22_x86_64.deb"
   fi
 
   curl -o $imagedir/tmp/$nxclient_pkg \
