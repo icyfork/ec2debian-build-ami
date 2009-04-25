@@ -68,6 +68,9 @@
 #
 # History:
 #
+#   2009-04-24 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade EC2 AMI tools to 1.3-31780
+#
 #   2009-04-10 Eric Hammond <ehammond@thinksome.com>
 #   - Leave PasswordAuthentication enabled on desktop builds for NX auth
 #   - Upgrade desktop to latest 3.3.0 versions of NX Free Edition software
@@ -100,11 +103,11 @@
 #
 #   2008-11-26 Eric Hammond <ehammond@thinksome.com>
 #   - Add support for building Ubuntu 9.04 "jaunty" images
-#   - Upgrade EC2 AMI tools to 1.3-30748 20071010
+#   - Upgrade EC2 AMI tools to 1.3-30748
 #   - Upgrade desktop to latest 3.3.0 versions of NX Free Edition software
 #
 #   2008-11-26 Eric Hammond <ehammond@thinksome.com>
-#   - Upgrade EC2 AMI tools to 1.3-26357 20071010
+#   - Upgrade EC2 AMI tools to 1.3-26357
 #   - Remove old 2.6.16 kernel modules
 #   - Upgrade desktop images to NX Free Edition 3.3.0
 #
@@ -144,7 +147,7 @@
 #   - Fix ec2-ssh-host-key-gen to not run on reboot.
 #
 #   2008-08-04 Eric Hammond <ehammond@thinksome.com>
-#   - Upgrade to latest AMI tools 1.3-21885 20071010 (obviates 1 patch)
+#   - Upgrade to latest AMI tools 1.3-21885 (obviates 1 patch)
 #
 #   2008-07-21 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade to debootstrap 1.0.10
@@ -233,7 +236,7 @@
 #   - Add support for desktop build with NoMachine NX Free.
 #
 #   2008-04-03 Eric Hammond <ehammond@thinksome.com>
-#   - Upgrade to latest AMI tools 1.3-20041 20071010 (obviates several patches)
+#   - Upgrade to latest AMI tools 1.3-20041 (obviates several patches)
 #   - Add new Ubuntu patches for new version of AMI tools
 #   - Switch from "uname -i" to "uname -m" to enable building on Ubuntu 64-bit
 #   - Merge Dapper, Edgy, Feisty, Gutsy, Hardy scripts (Hardy doesn't work yet)
@@ -613,7 +616,7 @@ EOF
 
 # Install Amazon EC2 AMI tools
 curl -L -o $imagedir/tmp/ec2-ami-tools.noarch.rpm \
-  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-30748.noarch.rpm
+  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-31780.noarch.rpm
 chroot $imagedir alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm 
 # These tools are out of date
 #if [ "$codename" = "intrepid" ]; then
