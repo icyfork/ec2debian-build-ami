@@ -68,6 +68,9 @@
 #
 # History:
 #
+#   2009-04-26 Paul Downman <lists@pauldowman.com>
+#   - Use RightScale Ubuntu mirror for 9.04 Jaunty
+#
 #   2009-04-24 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade EC2 AMI tools to 1.3-31780
 #
@@ -514,7 +517,7 @@ deb http://http.us.debian.org/debian   $codename         main contrib non-free
 #deb http://non-us.debian.org/debian-non-US stable/non-US main contrib non-free
 deb http://security.debian.org         $codename/updates main contrib non-free
 EOF
-elif [ "$codename" = "hardy" -o "$codename" = "intrepid" ]; then
+elif [ "$codename" = "hardy" -o "$codename" = "intrepid" -o "$codename" = "jaunty" ]; then
   cat <<EOF >$imagedir/etc/apt/sources.list
 deb http://ec2-us-east-mirror.rightscale.com/ubuntu $codename main restricted universe multiverse
 deb http://ec2-us-east-mirror.rightscale.com/ubuntu $codename-updates main restricted universe multiverse
