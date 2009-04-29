@@ -68,8 +68,9 @@
 #
 # History:
 #
-#   2009-04-28 Steven Parkes
+#   2009-04-28 Steven Parkes <smparkes@smparkes.net>
 #   - Typo fix for $originaldir
+#   - Typo catch for /dev/ptmx
 #
 #   2009-04-26 Paul Downman <lists@pauldowman.com>
 #   - Use RightScale Ubuntu mirror for 9.04 Jaunty
@@ -499,7 +500,6 @@ $BSDIR/debootstrap --arch $bsarch $codename $imagedir
 chroot $imagedir mount -t proc none /proc
 chroot $imagedir mkdir -p /dev/pts
 chroot $imagedir mount -t devpts none /dev/pts
-test -e /dev/ptmx || chroot $imagedir mknod --mode 666 /dev/ptmx c 5 2
 
 chroot $imagedir apt-get -f install -y
 
