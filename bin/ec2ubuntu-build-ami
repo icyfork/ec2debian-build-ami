@@ -68,6 +68,9 @@
 #
 # History:
 #
+#   2009-04-28 Steven Parkes
+#   - Typo fix for $originaldir
+#
 #   2009-04-26 Paul Downman <lists@pauldowman.com>
 #   - Use RightScale Ubuntu mirror for 9.04 Jaunty
 #
@@ -723,7 +726,7 @@ export distribution release codename tag bucket prefix \
 # Invoke external scripts/commands if requested
 export DEBIAN_FRONTEND=noninteractive
 for script in "${scripts[@]}"; do
-  cd "$original_dir"
+  cd "$originaldir"
   status=
   if [ -x "$script" ]; then
     "$script"
