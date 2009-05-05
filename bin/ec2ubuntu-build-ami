@@ -20,8 +20,8 @@
 #    --private-key PATH    - Defaults to $EC2_PRIVATE_KEY
 #    --cert PATH           - Defaults to $EC2_CERT
 #    --distribution NAME   - ubuntu                             debian
-#    --codename NAME    - dapper gutsy hardy intrepid jaunty etch lenny squeeze 
-#    --release VERSION  - 6.06   7.10  8.04  8.10     9.04   4.0  5.0   6.0
+#    --codename NAME    - dapper hardy intrepid jaunty etch lenny squeeze 
+#    --release VERSION  - 6.06   8.04  8.10     9.04   4.0  5.0   6.0
 #    --arch ARCHITECTURE   - i386 amd64 - Defaults to the architecture of the running kernel
 #    --timezone ZONE       - Defaults to UTC
 #    --locale LOCALE       - Defaults to en_US
@@ -67,6 +67,9 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2009-05-05 Eric Hammond <ehammond@thinksome.com>
+#   - Remove support for Ubuntu edgy, feisty, gutsy
 #
 #   2009-04-28 Steven Parkes <smparkes@smparkes.net>
 #   - Typo fix for $originaldir
@@ -337,9 +340,6 @@ fi
 if [ "$release" = "" ]; then
   case $codename in
     dapper)   release=6.06     ;;
-    edgy)     release=6.10     ;;
-    feisty)   release=7.04     ;;
-    gutsy)    release=7.10     ;;
     hardy)    release=8.04     ;;
     intrepid) release=8.10     ;;
     jaunty)   release=9.04     ;;
@@ -352,9 +352,6 @@ if [ "$release" = "" ]; then
 elif [ "$codename" = "" ]; then
   case $release in
     6.06)  codename=dapper   ;;
-    6.10)  codename=edgy     ;;
-    7.04)  codename=feisty   ;;
-    7.10)  codename=gutsy    ;;
     8.04)  codename=hardy    ;;
     8.10)  codename=intrepid ;;
     9.04)  codename=jaunty   ;;
@@ -364,7 +361,7 @@ fi
 
 if [ "$distribution" = "" ]; then
   case $codename in
-    dapper|edgy|feisty|gutsy|hardy|intrepid|jaunty)       distribution=ubuntu ;;
+    dapper|hardy|intrepid|jaunty)       distribution=ubuntu ;;
     hamm|slink|potato|woody|sarge|etch|lenny|squeeze|sid) distribution=debian ;;
     *)     echo "$0: Unrecognized codename: $codename" >&2; exit 1;
   esac
@@ -683,15 +680,6 @@ fi
 
 # We're missing the apparmor kernel module for now so avoid boot warnings
 /bin/rm -f $imagedir/etc/rc?.d/*apparmor
-
-# Release-specific
-if [ "$codename" = "gutsy" ]; then
-  # Install a copy of rsync with no lutimes support, as the Amazon EC2
-  # kernel does not support this newer feature to change symlink timestamps.
-  curl -s -o $imagedir/tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb \
-    https://level22.s3.amazonaws.com/20080203-rsync-no-lutimes/rsync_2.6.9-5ubuntu1_$bsarch.deb
-  chroot $imagedir dpkg --install /tmp/rsync_2.6.9-5ubuntu1_$bsarch.deb
-fi
 
 # Are we installing the desktop with NoMachine NX?
 if [ "$desktop" = "nx" ]; then
