@@ -455,17 +455,21 @@ if [ $bsarch = 'amd64' ]; then
   bundlearch="x86_64"
   export notlongext="64"
 
-  true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64-20080722.tar.gz}
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-x86_64.tgz
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
+  if [ ! "$kernel" ]; then
+    true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64-20080722.tar.gz}
+    # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-x86_64.tgz
+    # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
+  fi
 
 elif [ $bsarch = 'i386' ]; then
   bundlearch="i386"
   export notlongext=""
 
-  true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz}
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-i686.tgz
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
+  if [ ! "$kernel" ]; then
+    true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz}
+    # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-i686.tgz
+    # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
+  fi
 
 else
   echo >&2 "$0: Unrecognized --arch $bsarch"
