@@ -7,8 +7,8 @@
 # AMIs, depending on what type of new Ubuntu or Debian AMI you wish to
 # create:
 #
-#   32-bit, 2.6.21 kernel: ami-f51aff9c
-#   64-bit, 2.6.21 kernel: ami-f21aff9b
+#   32-bit, 2.6.21 kernel, us-east-1: ami-f51aff9c
+#   64-bit, 2.6.21 kernel, us-east-1: ami-f21aff9b
 #
 # Command line options:
 #
