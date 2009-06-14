@@ -30,6 +30,8 @@
 #    --no-run-user-data    - Do not run user-data script on first boot
 #    --package NAME        - Additional Ubuntu package to install
 #    --script FILE         - External script/command to run before bundle
+#    --kernel AKI          - Specify kernel image id
+#    --ramdisk ARI         - Specify ramdisk image id
 #    --modules "URL1 URL2" - Kernel modules to download and install
 #    --desktop nx          - Takes longer and makes AMI much bigger
 #    --builddir DIR        - Build directory [default: /mnt/build]
@@ -67,6 +69,11 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2009-06-14 Eric Hammond <ehammond@thinksome.com>
+#   - Add --kernel and --ramdisk options to specify AKI and ARI.
+#   - Install "denyhosts" on desktop images for improved security
+#   - Add failover for Ubuntu archive mirror hosts across availability zones
 #
 #   2009-05-05 Eric Hammond <ehammond@thinksome.com>
 #   - Remove support for Ubuntu edgy, feisty, gutsy
@@ -298,7 +305,7 @@
 #
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
-svnpath=http://ec2ubuntu.googlecode.com/svn-history/r135
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r149
 originaldir=$(/bin/pwd)
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien"
@@ -324,6 +331,8 @@ while [ $# -gt 0 ]; do
     --no-run-user-data) no_run_user_data=1;             shift ;;
     --script)      scripts=("${scripts[@]}" "$2");      shift 2 ;;
     --package)     packages="$packages $2";             shift 2 ;;
+    --kernel)      kernel=$2;                           shift 2 ;;
+    --ramdisk)     ramdisk=$2;                          shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
     --desktop)     desktop=$2;                          shift 2 ;;
     --builddir)    builddir=$2;                         shift 2 ;;
@@ -443,19 +452,22 @@ fi
 # http://groups.google.com/group/ec2ubuntu/web/compiling-kernel-modules-from-source-for-amazon-ec2
 # http://groups.google.com/group/ec2ubuntu/web/compiling-2-6-21-kernel-modules-from-source-for-amazon-ec2
 if [ $bsarch = 'amd64' ]; then
-  true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64-20080722.tar.gz}
-  # http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.16.33-xenU-x86_64.tgz 
-  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-x86_64.tgz
-  # http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
   bundlearch="x86_64"
   export notlongext="64"
+
+  true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64-20080722.tar.gz}
+  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-x86_64.tgz
+  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
+  fi
+
 elif [ $bsarch = 'i386' ]; then
-  true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz}
-  # http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.16-xenU.tgz
-  # http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.18-xenU-ec2-v1.0-i686.tgz
-  # http://s3.amazonaws.com/ec2-downloads/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
   bundlearch="i386"
   export notlongext=""
+
+  true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz}
+  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-i686.tgz
+  # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
+  fi
 else
   echo >&2 "$0: Unrecognized --arch $bsarch"
   exit 1
@@ -521,6 +533,16 @@ elif [ "$codename" = "hardy" -o "$codename" = "intrepid" -o "$codename" = "jaunt
   cat <<EOF >$imagedir/etc/apt/sources.list
 deb http://ec2-us-east-mirror.rightscale.com/ubuntu $codename main restricted universe multiverse
 deb http://ec2-us-east-mirror.rightscale.com/ubuntu $codename-updates main restricted universe multiverse
+
+deb http://ec2-us-east-mirror1.rightscale.com/ubuntu $codename main restricted universe multiverse
+deb http://ec2-us-east-mirror1.rightscale.com/ubuntu $codename-updates main restricted universe multiverse
+
+deb http://ec2-us-east-mirror2.rightscale.com/ubuntu $codename main restricted universe multiverse
+deb http://ec2-us-east-mirror2.rightscale.com/ubuntu $codename-updates main restricted universe multiverse
+
+deb http://ec2-us-east-mirror3.rightscale.com/ubuntu $codename main restricted universe multiverse
+deb http://ec2-us-east-mirror3.rightscale.com/ubuntu $codename-updates main restricted universe multiverse
+
 deb http://security.ubuntu.com/ubuntu $codename-security main restricted universe multiverse
 EOF
 else
@@ -587,7 +609,9 @@ done
 # Security
 chroot $imagedir shadowconfig on
 chroot $imagedir passwd -d root
-if [ ! "$desktop" ]; then
+if [ "$desktop" ]; then
+  packages="$packages denyhosts"
+else
   perl -pi -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
     $imagedir/etc/ssh/sshd_config
 fi
@@ -752,8 +776,17 @@ mkdir -p $imagedir/var/lib/apt/lists/partial
 cp $EC2_PRIVATE_KEY $imagedir/tmp/pk.pem
 cp $EC2_CERT        $imagedir/tmp/cert.pem
 
+if [ "$kernel" ]; then
+  kernel_option="--kernel $kernel"
+fi
+if [ "$ramdisk" ]; then
+  ramdisk_option="--ramdisk $ramdisk"
+fi
+
 chroot $imagedir ec2-bundle-vol         \
   -r $bundlearch                        \
+  $kernel_option                        \
+  $ramdisk_option                       \
   -d /tmp                               \
   -p $prefix                            \
   -u $AWS_USER_ID                       \
