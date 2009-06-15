@@ -70,6 +70,9 @@
 #
 # History:
 #
+#   2009-06-15 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to debootstrap 1.0.13
+#
 #   2009-06-14 Eric Hammond <ehammond@thinksome.com>
 #   - Add --kernel and --ramdisk options to specify AKI and ARI.
 #   - Install "denyhosts" on desktop images for improved security
@@ -493,7 +496,7 @@ chmod 755 $imagedir/usr/sbin/policy-rc.d
 
 # Bootstrap Ubuntu
 BSURL=http://us.archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
-BSVER=debootstrap_1.0.10
+BSVER=debootstrap_1.0.13
 BSDIR=$(pwd)/debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
   tar xz
