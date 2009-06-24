@@ -411,9 +411,6 @@ if [ "$distribution" = "ubuntu" ]; then
   packages="ubuntu-standard $packages"
   if [ "$desktop" ]; then
     packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
-    if [ "$codename" == "karmic" ]; then
-      packages="$packages update-manager update-notifier"
-    fi
   fi
 elif [ "$distribution" = "debian" ]; then
   packages="$packages udev psmisc lsb-release"
