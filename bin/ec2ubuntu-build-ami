@@ -20,8 +20,8 @@
 #    --private-key PATH    - Defaults to $EC2_PRIVATE_KEY
 #    --cert PATH           - Defaults to $EC2_CERT
 #    --distribution NAME   - ubuntu                             debian
-#    --codename NAME    - dapper hardy intrepid jaunty etch lenny squeeze 
-#    --release VERSION  - 6.06   8.04  8.10     9.04   4.0  5.0   6.0
+#    --codename NAME   - dapper hardy intrepid jaunty karmic etch lenny squeeze 
+#    --release VERSION - 6.06   8.04  8.10     9.04   9.10   4.0  5.0   6.0
 #    --arch ARCHITECTURE   - i386 amd64 - Defaults to the architecture of the running kernel
 #    --timezone ZONE       - Defaults to UTC
 #    --locale LOCALE       - Defaults to en_US
@@ -69,6 +69,9 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2009-06-23 Eric Hammond <ehammond@thinksome.com>
+#   - Add support for building Ubuntu 9.10 "karmic" images
 #
 #   2009-06-15 Eric Hammond <ehammond@thinksome.com>
 #   - Upgrade to debootstrap 1.0.13
@@ -355,6 +358,7 @@ if [ "$release" = "" ]; then
     hardy)    release=8.04     ;;
     intrepid) release=8.10     ;;
     jaunty)   release=9.04     ;;
+    karmic)   release=9.10     ;;
     etch)     release=4.0      ;;
     lenny)    release=5.0      ;;
     squeeze)  release=6.0      ;;
@@ -367,14 +371,15 @@ elif [ "$codename" = "" ]; then
     8.04)  codename=hardy    ;;
     8.10)  codename=intrepid ;;
     9.04)  codename=jaunty   ;;
+    9.10)  codename=karmic   ;;
     *)     echo "$0: Unrecognized release: $release" >&2; exit 1;
   esac
 fi
 
 if [ "$distribution" = "" ]; then
   case $codename in
-    dapper|hardy|intrepid|jaunty)       distribution=ubuntu ;;
-    hamm|slink|potato|woody|sarge|etch|lenny|squeeze|sid) distribution=debian ;;
+    dapper|hardy|intrepid|jaunty|karmic) distribution=ubuntu ;;
+    etch|lenny|squeeze|sid)              distribution=debian ;;
     *)     echo "$0: Unrecognized codename: $codename" >&2; exit 1;
   esac
 fi
@@ -504,8 +509,8 @@ curl -s $BSURL/${BSVER}_all.deb > /tmp/${BSVER}_all.deb
 ar p /tmp/${BSVER}_all.deb data.tar.gz |
   tar xvzOf - ./usr/share/debootstrap/devices.tar.gz > $BSDIR/devices.tar.gz
 case "$codename" in
-  hardy|intrepid|jaunty) ln -s gutsy $BSDIR/scripts/ubuntu/$codename ;;
-  etch|lenny|squeeze)    ln -s sid   $BSDIR/scripts/debian/$codename ;;
+  hardy|intrepid|jaunty|karmic) ln -s gutsy $BSDIR/scripts/ubuntu/$codename ;;
+  etch|lenny|squeeze)           ln -s sid   $BSDIR/scripts/debian/$codename ;;
 esac
 (cd $BSDIR/scripts ; ln -s */$codename $codename)
 export DEBOOTSTRAP_DIR=$BSDIR
@@ -596,7 +601,7 @@ done
 # Install XFS kernel module to match Amazon's 2.6.21fc8 kernel
 # http://ec2xfs-fix.notlong.com
 if [ $bsarch = 'i386' ]; then
-  case "$codename" in intrepid|jaunty|lenny|squeeze)
+  case "$codename" in intrepid|jaunty|karmic|lenny|squeeze)
     curl -s -o $imagedir/lib/modules/2.6.21.7-2.fc8xen/kernel/fs/xfs/xfs.ko \
       http://alestic-downloads.s3.amazonaws.com/linux-fs-modules-build-2.6.21.7-2.fc8xen-xfs.ko
     # Having this already loaded helps avoid kernel freeze after XFS mount.
