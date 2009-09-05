@@ -2,6 +2,9 @@
 #
 # This script will configure an Ubuntu server for use with RightScale
 #
+# Copied from:
+# http://ec2ubuntu.googlecode.com/svn/!svn/bc/159/trunk/etc/init.d/rightscale-init
+#
 
 start() {
   ## First check to see if we were launched through RightScale. Exit and remove if not...
