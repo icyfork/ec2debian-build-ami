@@ -34,9 +34,11 @@
 #    --ramdisk ARI         - Specify ramdisk image id
 #    --modules "URL1 URL2" - Kernel modules to download and install
 #    --desktop nx          - Takes longer and makes AMI much bigger
+#    --rightscale          - Include RightScale integration support
 #    --builddir DIR        - Build directory [default: /mnt/build]
 #    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol
 #    --location US/EU      - AWS location [default: US]
+#    --ec2-ami-tools-version VER - EC2 AMI tools version (e.g., "1.3.xxxxxx")
 #
 #    It is ok to specify multiple --package and --script options.
 #    It is ok to specify a quoted command for the --script option.
@@ -69,6 +71,14 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2009-09-04 Eric Hammond <ehammond@thinksome.com>
+#   - Don't try to install xfs.ko when --kernel is specified
+#   - Add --rightscale option
+#
+#   2009-08-05 Eric Hammond <ehammond@thinksome.com>
+#   - Pin the ec2-api-tools package version so it does not get downgraded
+#   - Add --ec2-ami-tools-version option
 #
 #   2009-08-04 Andrew Becherer <andrew@isecpartners.com>
 #   - Security: Generate ssh host key *after* initializing RNG seed
@@ -315,7 +325,7 @@
 #
 
 VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
-svnpath=http://ec2ubuntu.googlecode.com/svn-history/r149
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r159
 originaldir=$(/bin/pwd)
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien"
@@ -345,9 +355,11 @@ while [ $# -gt 0 ]; do
     --ramdisk)     ramdisk=$2;                          shift 2 ;;
     --modules)     modules=$2;                          shift 2 ;;
     --desktop)     desktop=$2;                          shift 2 ;;
+    --rightscale)  rightscale=1;                        shift ;;
     --builddir)    builddir=$2;                         shift 2 ;;
     --bundle-opts) bundle_vol_options=$2;               shift 2 ;;
     --location)    location=$2;                         shift 2 ;;
+    --ec2-ami-tools-version) tools_version=$2;          shift 2 ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
 done
@@ -401,6 +413,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
      ${location:=US} \
+     ${tools_version:=1.3-34544} \
      ${tag:=custom} ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
      ${builddir:=/mnt/build}
 
@@ -604,7 +617,7 @@ done
 
 # Install XFS kernel module to match Amazon's 2.6.21fc8 kernel
 # http://ec2xfs-fix.notlong.com
-if [ $bsarch = 'i386' ]; then
+if [ ! "$kernel" -a $bsarch = 'i386' ]; then
   case "$codename" in intrepid|jaunty|karmic|lenny|squeeze)
     curl -s -o $imagedir/lib/modules/2.6.21.7-2.fc8xen/kernel/fs/xfs/xfs.ko \
       http://alestic-downloads.s3.amazonaws.com/linux-fs-modules-build-2.6.21.7-2.fc8xen-xfs.ko
@@ -658,8 +671,15 @@ EOF
 
 # Install Amazon EC2 AMI tools
 curl -L -o $imagedir/tmp/ec2-ami-tools.noarch.rpm \
-  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.3-34544.noarch.rpm
+  http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-$tools_version.noarch.rpm
 chroot $imagedir alien -i --scripts /tmp/ec2-ami-tools.noarch.rpm 
+# Ubuntu archives tend to be out of date, so prevent downgrades
+cat >>$imagedir/etc/apt/preferences <<EOF
+Package: ec2-ami-tools
+Pin: version $tools_version
+Pin-Priority: 500
+EOF
+
 # These tools are out of date
 #if [ "$codename" = "intrepid" ]; then
 #  chroot $imagedir apt-get install -y ec2-ami-tools
@@ -711,7 +731,10 @@ install_init ec2-mkdir-tmp            36 "S"
 install_init ec2-ssh-host-key-gen     60 "S"
 install_init ec2-get-credentials      70 "2 3 4 5"
 if [ ! $no_run_user_data ]; then
-  install_init ec2-run-user-data        71 "2 3 4 5"
+  install_init ec2-run-user-data      71 "2 3 4 5"
+fi
+if [ "$rightscale" ]; then
+  install_init rightscale-init        99 "2 3 4 5" 09 "0 1 6"
 fi
 
 # Inside Xen, CMOS clock is irrelevant, so save seconds at boot
