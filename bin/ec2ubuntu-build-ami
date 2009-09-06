@@ -324,8 +324,7 @@
 #     others.
 #
 
-VERSION=$(perl -e 'print q$Revision$=~/(\d+)/')
-svnpath=http://ec2ubuntu.googlecode.com/svn-history/r162
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r166
 originaldir=$(/bin/pwd)
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien"
