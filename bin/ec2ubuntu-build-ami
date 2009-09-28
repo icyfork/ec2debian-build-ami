@@ -10,6 +10,9 @@
 #   32-bit, 2.6.21 kernel, us-east-1: ami-f51aff9c
 #   64-bit, 2.6.21 kernel, us-east-1: ami-f21aff9b
 #
+# This program assumes you are in the us-east-1 region.  If you are building
+# an AMI for a different region, you should specify --kernel and --ramdisk
+#
 # Command line options:
 #
 #    --bucket NAME         - REQUIRED
@@ -413,7 +416,8 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
      ${location:=US} \
      ${tools_version:=1.3-34544} \
-     ${tag:=custom} ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
+     ${tag:=custom} \
+     ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
      ${builddir:=/mnt/build}
 
 if [ "$codename" == "dapper" ]; then
@@ -434,22 +438,25 @@ elif [ "$distribution" = "debian" ]; then
   fi
 fi
                              
-if [ "$bsarch" = "" ]; then
-  if [ $(uname -m) = 'x86_64' ]; then
-    bsarch="amd64"
-  else
-    bsarch="i386"
-  fi
+if [ $(uname -m) = 'x86_64' ]; then
+  true ${bsarch:="amd64"}
+  bundlearch="x86_64"
+  export notlongext="64"
+else
+  true ${bsarch:="i386"}
+  bundlearch="i386"
+  export notlongext=""
 fi
 
-echo Building AMI for $distribution $release $codename
-echo locale:       $locale
-echo charmap:      $charmap
-echo location:     $location
-echo timezone:     $timezone
-echo Image size:   ${size} MB
-echo Uploading to: $bucket/$prefix
-echo Packages:     $packages
+echo "Building AMI for $distribution $release $codename"
+echo "locale:       $locale"
+echo "charmap:      $charmap"
+echo "location:     $location"
+echo "timezone:     $timezone"
+echo "Image size:   ${size} MB"
+echo "Uploading to: $bucket/$prefix"
+echo "bundlearch:   $bundlearch"
+echo "bsarch:       $bsarch"
 
 set -e
 set -x
@@ -470,38 +477,48 @@ else
   yum install -y binutils
 fi
 
-# Amazon's kernel modules are mostly out of date, missing fixes, or
-# not built with the right version string. To build the modules
-# yourself, see:
-# http://groups.google.com/group/ec2ubuntu/web/compiling-kernel-modules-from-source-for-amazon-ec2
-# http://groups.google.com/group/ec2ubuntu/web/compiling-2-6-21-kernel-modules-from-source-for-amazon-ec2
-if [ $bsarch = 'amd64' ]; then
-  bundlearch="x86_64"
-  export notlongext="64"
+# To build kernel modules yourself, see:
+# http://alestic.com/2008/05/kernel-modules-2-6-21
 
-  if [ ! "$kernel" ]; then
-    true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.x86_64-20080722.tar.gz}
+if [ ! "$kernel" -a ! "$modules" ]; then
+  if [ $bsarch = 'amd64' ]; then
+    case "$codename" in
+      karmic)
+        kernel=aki-9c1efef5
+        ramdisk=ari-901efef9
+        packages="$packages linux-image-2.6.31-300-ec2"
+        modules=
+        ;;
+      *)
+        modules=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz
+    esac
+    # Amazon's 64-bit kernel modules:
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-x86_64.tgz
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
-  fi
 
-elif [ $bsarch = 'i386' ]; then
-  bundlearch="i386"
-  export notlongext=""
-
-  if [ ! "$kernel" ]; then
-    true ${modules:=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz}
+  elif [ $bsarch = 'i386' ]; then
+    case "$codename" in
+      karmic)
+        kernel=aki-841efeed
+        ramdisk=ari-9a1efef3
+        packages="$packages linux-image-2.6.31-300-ec2"
+        modules=
+        ;;
+      *)
+        modules=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz
+    esac
+    # Amazon's 32-bit kernel modules:
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-i686.tgz
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
+  else
+    echo >&2 "$0: Unrecognized --arch $bsarch"
+    exit 1
   fi
-
-else
-  echo >&2 "$0: Unrecognized --arch $bsarch"
-  exit 1
 fi
-echo "bundlearch: $bundlearch"
-echo "bsarch:     $bsarch"
-echo "modules:    $modules"
+echo "kernel:       $kernel"
+echo "ramdisk:      $ramdisk"
+echo "modules:      $modules"
+echo "Packages:     $packages"
 
 if [ "$desktop" ]; then
   notlongext="$notlongext-desktop"
@@ -587,16 +604,20 @@ chroot $imagedir apt-get update
 if [ "$bundlearch" = "i386" ]; then
   if [ "$codename" != "dapper" ]; then
     chroot $imagedir apt-get install -y libc6-xen
-    echo 'hwcap 0 nosegneg' > $imagedir/etc/ld.so.conf.d/libc6-xen.conf
-    chroot $imagedir apt-get remove -y libc6-i686 || true
-    chroot $imagedir ldconfig
+    if [ "$codename" != "karmic" ]; then
+      echo 'hwcap 0 nosegneg' > $imagedir/etc/ld.so.conf.d/libc6-xen.conf
+      chroot $imagedir ldconfig
+      chroot $imagedir apt-get remove -y libc6-i686 || true
+    fi
   fi
 else
   chroot $imagedir apt-get install -y ia32-libs
 fi
 
 # MAKEDEV is expected in /dev by some packages.
-ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
+if [ "$codename" != "karmic" ]; then
+  ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
+fi
 
 # Upgrade/install packages
 chroot $imagedir apt-get -y upgrade
