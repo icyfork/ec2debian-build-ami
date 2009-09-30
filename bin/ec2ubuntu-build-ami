@@ -7,8 +7,8 @@
 # AMIs, depending on what type of new Ubuntu or Debian AMI you wish to
 # create:
 #
-#   32-bit, 2.6.21 kernel, us-east-1: ami-f51aff9c
-#   64-bit, 2.6.21 kernel, us-east-1: ami-f21aff9b
+#   32-bit, 2.6.21 kernel, us-east-1: ami-48aa4921
+#   64-bit, 2.6.21 kernel, us-east-1: ami-f61dfd9f
 #
 # This program assumes you are in the us-east-1 region.  If you are building
 # an AMI for a different region, you should specify --kernel and --ramdisk
