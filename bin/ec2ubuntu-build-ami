@@ -7,11 +7,13 @@
 # AMIs, depending on what type of new Ubuntu or Debian AMI you wish to
 # create:
 #
-#   32-bit, 2.6.21 kernel, us-east-1: ami-48aa4921
-#   64-bit, 2.6.21 kernel, us-east-1: ami-f61dfd9f
+#   us-east-1, 2.6.21 kernel
+#   32-bit: ami-48aa4921, aki-6eaa4907, ari-42b95a2b
+#   64-bit: ami-f61dfd9f, aki-a3d737ca, ari-7cb95a15
 #
-# This program assumes you are in the us-east-1 region.  If you are building
-# an AMI for a different region, you should specify --kernel and --ramdisk
+#   eu-west-1, 2.6.21 kernel
+#   32-bit: ami-0a48637e, aki-02486376, ari-e44d6690
+#   64-bit: ami-927a51e6, aki-f2634886, ari-fa4d668e
 #
 # Command line options:
 #
@@ -75,6 +77,14 @@
 #
 # History:
 #
+#   2009-1011 Eric Hammond <ehammond@thinksome.com>
+#   - Upgrade to debootstrap 1.0.20
+#
+#   2009-09-30 Eric Hammond <ehammond@thinksome.com>
+#   - Use new 2.6.21 kernels and kernel modules from Amazon (security fix)
+#   - Add Alestic PPA to apt sources on Ubuntu
+#   - Install runurl from Alestic PPA
+#
 #   2009-06-15 Toby White
 #   - Upgrade to debootstrap 1.0.19
 #
@@ -83,7 +93,7 @@
 #   - Add --rightscale option
 #
 #   2009-08-05 Eric Hammond <ehammond@thinksome.com>
-#   - Pin the ec2-api-tools package version so it does not get downgraded
+#   - Pin the ec2-ami-tools package version so it does not get downgraded
 #   - Add --ec2-ami-tools-version option
 #
 #   2009-08-04 Andrew Becherer <andrew@isecpartners.com>
@@ -430,7 +440,7 @@ else
 fi
 
 if [ "$distribution" = "ubuntu" ]; then
-  packages="ubuntu-standard $packages"
+  packages="ubuntu-standard $packages runurl"
   if [ "$desktop" ]; then
     packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
   fi
@@ -456,8 +466,8 @@ echo "locale:       $locale"
 echo "charmap:      $charmap"
 echo "location:     $location"
 echo "timezone:     $timezone"
-echo "Image size:   ${size} MB"
-echo "Uploading to: $bucket/$prefix"
+echo "image size:   ${size} MB"
+echo "uploading to: $bucket/$prefix"
 echo "bundlearch:   $bundlearch"
 echo "bsarch:       $bsarch"
 
@@ -493,9 +503,9 @@ if [ ! "$kernel" -a ! "$modules" ]; then
         modules=
         ;;
       *)
-        modules=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz
+        modules=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen-ec2-x86_64-20090930.tar.gz
     esac
-    # Amazon's 64-bit kernel modules:
+    # http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-x86_64.tgz
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-x86_64.tgz
 
@@ -508,9 +518,9 @@ if [ ! "$kernel" -a ! "$modules" ]; then
         modules=
         ;;
       *)
-        modules=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz
+        modules=http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen-ec2-i686-20090930.tar.gz
     esac
-    # Amazon's 32-bit kernel modules:
+    # http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.i686-20080722.tar.gz
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.18-xenU-ec2-v1.0-i686.tgz
     # http://ec2-downloads.s3.amazonaws.com/ec2-modules-2.6.21-2952.fc8xen-i686.tgz
   else
@@ -521,7 +531,7 @@ fi
 echo "kernel:       $kernel"
 echo "ramdisk:      $ramdisk"
 echo "modules:      $modules"
-echo "Packages:     $packages"
+echo "packages:     $packages"
 
 if [ "$desktop" ]; then
   notlongext="$notlongext-desktop"
@@ -537,7 +547,7 @@ chmod 755 $imagedir/usr/sbin/policy-rc.d
 
 # Bootstrap Ubuntu
 BSURL=http://us.archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
-BSVER=debootstrap_1.0.19
+BSVER=debootstrap_1.0.20
 BSDIR=$(pwd)/debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
   tar xz
@@ -600,6 +610,13 @@ deb http://security.ubuntu.com/ubuntu $codename-security main restricted univers
 EOF
 fi
 
+# Add Alestic PPA: https://launchpad.net/~alestic/+archive/ppa
+if [ "$distribution" = "ubuntu" ]; then
+  echo "deb http://ppa.launchpad.net/alestic/ppa/ubuntu $codename main"|
+    tee $imagedir/etc/apt/sources.list.d/alestic-ppa.list    
+  chroot $imagedir apt-key adv --keyserver keyserver.ubuntu.com --recv-keys BE09C571
+fi
+
 # Update package list
 chroot $imagedir apt-get update
 
@@ -638,17 +655,8 @@ for module in $modules; do
   curl -s $module | tar xzC $imagedir
 done
 
-# Install XFS kernel module to match Amazon's 2.6.21fc8 kernel
-# http://ec2xfs-fix.notlong.com
-if [ ! "$kernel" -a $bsarch = 'i386' ]; then
-  case "$codename" in intrepid|jaunty|karmic|lenny|squeeze)
-    curl -s -o $imagedir/lib/modules/2.6.21.7-2.fc8xen/kernel/fs/xfs/xfs.ko \
-      http://alestic-downloads.s3.amazonaws.com/linux-fs-modules-build-2.6.21.7-2.fc8xen-xfs.ko
-    # Having this already loaded helps avoid kernel freeze after XFS mount.
-    echo "xfs" >> $imagedir/etc/modules
-    ;;
-  esac
-fi
+# This kernel module has historically been loaded; keeping the tradition.
+echo "xfs" >> $imagedir/etc/modules
 
 for module_version in $(cd $imagedir/lib/modules; ls); do
   chroot $imagedir depmod -a $module_version
