@@ -17,9 +17,9 @@ logger="logger -t $prog"
 curl="curl --retry 3 --silent --show-error --fail"
 instance_data_url=http://169.254.169.254/2008-02-01
 
-# Wait until networking is up on the EC2 instance.
+# Wait until meta-data is available.
 perl -MIO::Socket::INET -e '
- until(new IO::Socket::INET("169.254.169.254:80")){print"Waiting for network...\n";sleep 1}
+ until(new IO::Socket::INET("169.254.169.254:80")){print"Waiting for meta-data...\n";sleep 1}
 ' | $logger
 
 # Exit if we have already run on this instance (e.g., previous boot).
@@ -37,12 +37,14 @@ $logger "Retrieving user-data"
 $curl -o $user_data_file $instance_data_url/user-data 2>&1 | $logger
 if [ ! -s $user_data_file ]; then
   $logger "No user-data available"
+  echo "user-data was not available" > $been_run_file
 elif head -1 $user_data_file | egrep -v '^#!'; then
   $logger "Skipping user-data as it does not begin with #!"
+  echo "user-data did not begin with #!" > $been_run_file
 else
   $logger "Running user-data"
+  echo "user-data has already been run on this instance" > $been_run_file
   $user_data_file 2>&1 | logger -t "user-data"
   $logger "user-data exit code: $?"
 fi
 rm -f $user_data_file
-echo "$prog has already been run on this instance" > $been_run_file
