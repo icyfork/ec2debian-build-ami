@@ -79,6 +79,7 @@
 #
 #   2009-10-28 Eric Hammond <ehammond@thinksome.com>
 #   - Wait for meta-data before setting ssh host key (Thanks to truecyclist)
+#   - Allow user-data to remove "been run" file (Thanks to Gabriell Nell)
 #
 #   2009-10-12 Eric Hammond <ehammond@thinksome.com>
 #   - Ensure /lib/modules are owned by root (Thanks to Dmitry for catching)
@@ -346,7 +347,7 @@
 #     others.
 #
 
-svnpath=http://ec2ubuntu.googlecode.com/svn-history/r173
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r175
 originaldir=$(/bin/pwd)
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien"
