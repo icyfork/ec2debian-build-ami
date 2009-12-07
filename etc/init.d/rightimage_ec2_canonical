@@ -1,0 +1,245 @@
+#!/bin/bash
+# Copyright (c) 2009 by RightScale Inc., all rights reserved
+# chkconfig: 2 96 01
+# description: This is the RightScale cloud seed script. \
+#   It is used to bootstrap the installation of the RightLink software onto a \
+#   cloud instance. If you have any questions please feel free to look through \
+#   the script or contact RightScale.
+#
+
+#############################################################################
+## Setup environment used by the remainder of this script
+#############################################################################
+
+#Set Root Home
+export HOME=/root
+export RS_CLOUD=ec2
+
+#Get the Distribution if Linux based
+#currently only supported Linux distributions are Ubuntu or CentOS.
+#you can add your distro here if your package manager is yum or apt
+if [ -e /usr/bin/lsb_release ]; then
+  case `lsb_release -si` in
+    Ubuntu*) export RS_DISTRO=ubuntu
+             export RS_BASE_OS=debian
+             ;;
+    Debian*) export RS_DISTRO=debian
+             export RS_BASE_OS=debian
+             echo 
+             ;;
+    CentOS*) export RS_DISTRO=centos
+             export RS_BASE_OS=redhat
+             ;;
+    Fedora*) export RS_DISTRO=redhat
+             export RS_BASE_OS=redhat
+             ;;
+    *)       export RS_DISTRO=unknown
+             export RS_BASE_OS=unknown
+             ;;
+  esac
+
+  export RS_OS_VERSION=`lsb_release -rs`  
+fi
+
+# We don't currently handle non-Linux-based distros.
+if [ -z "$RS_DISTRO" ]; then
+  export RS_DISTRO=unknown
+  export RS_BASE_OS=unknown
+fi
+
+# Get the architecture. The command below works for Linux only.
+if [ "$RS_BASE_OS" == "debian" ]; then
+  export RS_ARCH=`dpkg --print-architecture || echo unknown`
+else
+  export RS_ARCH=`uname -m || echo unknown`
+fi
+
+###############################################################################
+## Determine whether the script has everything it needs to continue
+###############################################################################
+
+if [ "$RS_DISTRO" == "unknown" -o "$RS_ARCH" == "unknown" ]; then
+  logger -st RightScale "Unsupported OS/architecture $RS_DISTRO/$RS_ARCH; exiting."
+  exit 2
+fi
+
+# Source function library  and networking configuration for Redhat-based distros
+if [ "$RS_BASE_OS" == "redhat" ]; then
+  . /etc/rc.d/init.d/functions
+  [ -r /etc/sysconfig/network ] && . /etc/sysconfig/network
+fi
+
+# Check that networking is up. (Only works on Redhat-based systems.)
+[ "${NETWORKING}" == "no" ] && exit 1
+
+###############################################################################
+## Define some functions to be called by the start() function (see below)
+###############################################################################
+
+export CURL_OPT=(-s -S -f -L --retry 7)
+S3_PROD_BUCKET=http://s3.amazonaws.com/rightscale_rightlink
+S3_DEV_BUCKET=http://s3.amazonaws.com/rightscale_rightlink_dev
+
+
+CLOUD_USERDATA=
+get_cloud_userdata() {
+ CLOUD_USERDATA=`curl -s "http://169.254.169.254/latest/user-data"`
+}
+
+RS_VERSION=
+get_rs_version() {
+  if [ -e /etc/rightscale.d/rightscale-release ]; then
+    RS_VERSION=`cat /etc/rightscale.d/rightscale-release`
+  elif imageversion=`expr "$CLOUD_USERDATA" : '.*RS_version=\([-_.0-9a-z]*\)'`; then
+    RS_VERSION=$imageversion
+  else
+    RS_VERSION="latest"
+  fi
+}
+
+RS_SRC=
+get_rs_src() {
+  if devsrc=`expr "$CLOUD_USERDATA" : '.*RS_src=\([-_.0-9a-z]*\)'`; then
+    RS_SRC=$devsrc
+  fi
+}
+
+PACKAGE_NAME=""
+get_package_name() {
+  if [ "$RS_BASE_OS" == "debian" ]; then
+    suffix="deb"
+  elif [ "$RS_BASE_OS" == "redhat" ]; then
+    suffix="rpm"
+  fi
+
+  PACKAGE_NAME="rightscale_${RS_VERSION}-${RS_DISTRO}_${RS_OS_VERSION}-${RS_ARCH}.${suffix}"
+}
+
+download_package() {
+  CODE=500
+  while [ "$CODE" -ge "500" ]; do
+    CODE=`curl "${CURL_OPT[@]}" -w '%{http_code}' -o /root/$PACKAGE_NAME $S3_PROD_BUCKET/$PACKAGE_NAME`
+    logger -st RightScale "Downloading $PACKAGE_NAME - curl returned code: $CODE"
+  done
+  if [ ! -e /root/$PACKAGE_NAME ]; then
+    logger -st RightScale "Fatal error! HTTP code $CODE - could not download $S3_PROD_BUCKET/$PACKAGE_NAME"
+    exit 1
+  fi
+}
+
+install_package() {
+  logger -st RightScale "installing package: $PACKAGE_NAME"
+  if [ "$RS_BASE_OS" == "debian" ]; then
+    export DEBIAN_FRONTEND=noninteractive
+    dpkg -i /root/$PACKAGE_NAME  | logger -st RightScale
+  elif [ "$RS_BASE_OS" == "redhat" ]; then 
+    yum localinstall -y --nogpgcheck /root/$PACKAGE_NAME | logger -st RightScale
+  fi
+}
+
+TARBALL_NAME=""
+get_tarball_name() {
+  TARBALL_NAME="rightscale_${RS_SRC}.tgz"
+}
+
+download_tarball() {
+  CODE=500
+  while [ "$CODE" -ge "500" ]; do
+    CODE=`curl "${CURL_OPT[@]}" -w '%{http_code}' -o /root/$TARBALL_NAME $S3_DEV_BUCKET/$TARBALL_NAME`
+    logger -st RightScale "Downloading $TARBALL_NAME - curl returned code: $CODE"
+  done
+}
+
+install_tarball() {
+  mkdir -p /opt
+  tar -C /opt/ -zxf /root/$TARBALL_NAME
+}
+
+invoke_tarball_scripts() {
+  chmod +x /opt/rightscale/bin/*
+  
+  if [ -e /opt/rightscale/bin/post_install_dev.sh ]; then
+    /opt/rightscale/bin/post_install_dev.sh
+  else
+    /opt/rightscale/bin/post_install.sh
+  fi
+}
+
+remove_me() {
+  my_name=`readlink -e $0`
+
+  if [ "$RS_BASE_OS" == "debian" ]; then
+    update-rc.d -f `basename $my_name` remove
+  elif [ "$RS_BASE_OS" == "redhat" ]; then
+    chkconfig --del `basename $my_name`
+  fi
+}
+
+detect_rightscale_servertemplate() {
+  if `echo $CLOUD_USERDATA | grep -v "RS_rn_id=" 1>/dev/null 2>&1` ; then
+    logger -st RightScale "Removing RightScale from init sequence"
+    remove_me
+    exit 0
+  fi
+}
+
+setup_cloud_file() {
+  mkdir -p /etc/rightscale.d
+  echo -n $RS_CLOUD > /etc/rightscale.d/cloud
+  chmod 0444 /etc/rightscale.d/cloud
+}
+
+enable_root_logins() {
+  cp -f /home/ubuntu/.ssh/authorized_keys  /root/.ssh/.
+}
+
+start() {
+  logger -st RightScale "Installing RightScale on EC2 $RS_DISTRO-$RS_ARCH"
+
+  get_cloud_userdata
+  detect_rightscale_servertemplate
+  setup_cloud_file
+  enable_root_logins
+  get_rs_version
+  get_rs_src
+
+  if [ -z "$RS_SRC" -o "$RS_SRC" == "right_link_use_package" ]; then
+    get_package_name
+    
+    if [ ! -e /root/$PACKAGE_NAME ]; then
+      logger -st RightScale "Fetching RightScale package from $S3_PROD_BUCKET/$PACKAGE_NAME"
+      download_package
+    else
+      logger -st RightScale "Local RightScale package found in /root/$PACKAGE_NAME"
+    fi
+
+    install_package
+    remove_me
+  else
+    get_tarball_name
+    logger -st RightScale "Fetching development tarball from $S3_DEV_BUCKET/$TARBALL_NAME"
+    download_tarball
+    install_tarball
+    invoke_tarball_scripts
+  fi
+
+  exit 0
+}
+
+stop() {
+  exit 0
+}
+
+# See how we were called.
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  *)
+    echo "Usage: $0 start|stop"
+    exit 255
+    ;;
+esac
