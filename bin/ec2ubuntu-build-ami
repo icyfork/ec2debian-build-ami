@@ -78,6 +78,11 @@
 # History:
 #
 #   2009-10-28 Eric Hammond <ehammond@thinksome.com>
+#   - Add Alestic PPA to apt sources on Debian (using "karmic")
+#   - Install runrul from Alestic PPA on Debian
+#   - Upgrade EC2 AMI tools to 1.3-34544
+#
+#   2009-10-28 Eric Hammond <ehammond@thinksome.com>
 #   - Wait for meta-data before setting ssh host key (Thanks to truecyclist)
 #   - Allow user-data to remove "been run" file (Thanks to Gabriell Nell)
 #
@@ -350,7 +355,7 @@
 svnpath=http://ec2ubuntu.googlecode.com/svn-history/r175
 originaldir=$(/bin/pwd)
 
-packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien"
+packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien runurl"
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -435,7 +440,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
      ${location:=US} \
-     ${tools_version:=1.3-34544} \
+     ${tools_version:=1.3-46266} \
      ${tag:=custom} \
      ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
      ${builddir:=/mnt/build}
@@ -447,7 +452,7 @@ else
 fi
 
 if [ "$distribution" = "ubuntu" ]; then
-  packages="ubuntu-standard $packages runurl"
+  packages="ubuntu-standard $packages"
   if [ "$desktop" ]; then
     packages="$packages ubuntu-desktop kubuntu-desktop user-setup"
   fi
@@ -618,11 +623,13 @@ EOF
 fi
 
 # Add Alestic PPA: https://launchpad.net/~alestic/+archive/ppa
-if [ "$distribution" = "ubuntu" ]; then
-  echo "deb http://ppa.launchpad.net/alestic/ppa/ubuntu $codename main"|
-    tee $imagedir/etc/apt/sources.list.d/alestic-ppa.list    
-  chroot $imagedir apt-key adv --keyserver keyserver.ubuntu.com --recv-keys BE09C571
+ppacodename=$codename
+if [ "$distribution" = "debian" ]; then
+  ppacodename=karmic
 fi
+echo "deb http://ppa.launchpad.net/alestic/ppa/ubuntu $ppacodename main"|
+  tee $imagedir/etc/apt/sources.list.d/alestic-ppa.list    
+chroot $imagedir apt-key adv --keyserver keyserver.ubuntu.com --recv-keys BE09C571
 
 # Update package list
 chroot $imagedir apt-get update
