@@ -77,6 +77,9 @@
 #
 # History:
 #
+#   2009-12-27 Eric Hammond <ehammond@thinksome.com>
+#   - Save .orig copy of sshd_config
+#
 #   2009-10-28 Eric Hammond <ehammond@thinksome.com>
 #   - Add Alestic PPA to apt sources on Debian (using "karmic")
 #   - Install runrul from Alestic PPA on Debian
@@ -686,7 +689,7 @@ chroot $imagedir passwd -d root
 if [ "$desktop" ]; then
   packages="$packages denyhosts"
 else
-  perl -pi -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
+  perl -pi.orig -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
     $imagedir/etc/ssh/sshd_config
 fi
 
