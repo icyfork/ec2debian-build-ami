@@ -1,5 +1,4 @@
 #!/bin/bash
-
 #
 # ec2ubuntu-build-ami
 #
@@ -16,42 +15,45 @@
 #   32-bit: ami-0a48637e, aki-02486376, ari-e44d6690
 #   64-bit: ami-927a51e6, aki-f2634886, ari-fa4d668e
 #
-# Command line options. Those marked with (*) are not used with --ebs.
+# Command line options:
 #
-#    --bucket NAME         - Required. (*)
-#    --prefix PREFIX       - Defaults to a reasonable manifest name. (*)
-#    --tag TAGNAME         - Used in the default prefix (*)
-#    --user ID             - Defaults to $AWS_USER_ID
-#    --access-key ID       - Defaults to $AWS_ACCESS_KEY_ID
-#    --secret-key ID       - Defaults to $AWS_SECRET_ACCESS_KEY_ID
-#    --private-key PATH    - Defaults to $EC2_PRIVATE_KEY
-#    --cert PATH           - Defaults to $EC2_CERT
-#    --distribution NAME   - ubuntu                             debian
-#    --codename NAME   - dapper hardy intrepid jaunty karmic etch lenny squeeze 
-#    --release VERSION - 6.06   8.04  8.10     9.04   9.10   4.0  5.0   6.0
-#    --arch ARCHITECTURE   - i386 amd64 - Defaults to the architecture of the running kernel
-#    --timezone ZONE       - Defaults to UTC
-#    --locale LOCALE       - Defaults to en_US
-#    --charmap CHARMAP     - Defaults to UTF-8
-#    --size MB             - Root partition size in megabytes (*)
-#    --no-run-user-data    - Do not run user-data script on first boot
-#    --package NAME        - Additional Ubuntu package to install
-#    --script FILE         - External script/command to run before bundle
-#    --kernel AKI          - Specify kernel image id
-#    --ramdisk ARI         - Specify ramdisk image id
-#    --modules "URL1 URL2" - Kernel modules to download and install
-#    --desktop nx          - Takes longer and makes AMI much bigger
-#    --rightscale          - Include RightScale integration support
-#    --builddir DIR        - Build directory [default: /mnt/build]
-#    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol (*)
-#    --location US/EU      - AWS location [default: US]
-#    --ec2-ami-tools-version VER - EC2 AMI tools version (e.g., "1.3.xxxxxx")
-#    --ebs                 - Build an Elastic Block Store snapshot image
+#   --ebs                 - Build an EBS boot AMI (defaults to S3 based AMI)
+#   --user ID             - Defaults to $AWS_USER_ID
+#   --access-key ID       - Defaults to $AWS_ACCESS_KEY_ID
+#   --secret-key ID       - Defaults to $AWS_SECRET_ACCESS_KEY_ID
+#   --private-key PATH    - Defaults to $EC2_PRIVATE_KEY
+#   --cert PATH           - Defaults to $EC2_CERT
+#   --distribution NAME   - ubuntu                          debian
+#   --codename NAME   - dapper hardy intrepid jaunty karmic etch lenny squeeze
+#   --release VERSION - 6.06   8.04  8.10     9.04   9.10   4.0  5.0   6.0
+#   --arch ARCHITECTURE   - i386 amd64 (defaults to arch of the running host)
+#   --timezone ZONE       - Defaults to UTC
+#   --locale LOCALE       - Defaults to en_US
+#   --charmap CHARMAP     - Defaults to UTF-8
+#   --no-run-user-data    - Do not run user-data script on first boot
+#   --package NAME        - Additional Ubuntu package to install
+#   --script FILE         - External script/command to run before bundle
+#   --kernel AKI          - Specify kernel image id
+#   --ramdisk ARI         - Specify ramdisk image id
+#   --modules "URL1 URL2" - Kernel modules to download and install
+#   --desktop nx          - Takes longer and makes AMI much bigger
+#   --rightscale          - Include RightScale integration support
+#   --builddir DIR        - Build directory [default: /mnt/build]
+#   --location US/EU      - AWS location [default: US]
+#   --ec2-ami-tools-version VER - EC2 AMI tools version (e.g., "1.3.xxxxxx")
 #
-#    It is ok to specify multiple --package and --script options.
-#    It is ok to specify a quoted command for the --script option.
-#    You can also use "--desktop yes" to install the desktop packages
-#    without the NX software.
+#   The following options are only for S3-based AMIS (not using --ebs):
+#
+#   --bucket NAME         - S3 bucket name for non-EBS AMIs
+#   --prefix PREFIX       - Defaults to a reasonable manifest name
+#   --tag TAGNAME         - Used in the default prefix value
+#   --size MB             - Root partition size in megabytes (default 10240)
+#   --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol
+#
+#   It is ok to specify multiple --package and --script options.
+#   It is ok to specify a quoted command for the --script option.
+#   You can also use "--desktop yes" to install the desktop packages
+#   without the NX software.
 #
 # Example:
 #
@@ -361,7 +363,7 @@
 #     others.
 #
 
-svnpath=http://ec2ubuntu.googlecode.com/svn-history/r175
+svnpath=http://ec2ubuntu.googlecode.com/svn-history/r181
 originaldir=$(/bin/pwd)
 
 packages="openssh-server rsync ruby openssl curl ca-certificates libopenssl-ruby patch alien runurl"
@@ -982,7 +984,6 @@ You now need to:
  3. create an EBS snapshot AMI (ec2-create-snapshot)
  4. (optional) delete the volume (ec2-delete-volume)
  5. register the snapshot as an AMI (ec2-register)
- 6. (optional) shutdown this instance
 
 You can then use ec2-run-instances with your new AMI.
 
