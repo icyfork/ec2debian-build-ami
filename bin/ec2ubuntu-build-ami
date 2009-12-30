@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #
 # ec2ubuntu-build-ami
 #
@@ -15,10 +16,11 @@
 #   32-bit: ami-0a48637e, aki-02486376, ari-e44d6690
 #   64-bit: ami-927a51e6, aki-f2634886, ari-fa4d668e
 #
-# Command line options:
+# Command line options. Those marked with (*) are not used with --ebs.
 #
-#    --bucket NAME         - REQUIRED
-#    --prefix PREFIX       - Defaults to a reasonable manifest name.
+#    --bucket NAME         - Required. (*)
+#    --prefix PREFIX       - Defaults to a reasonable manifest name. (*)
+#    --tag TAGNAME         - Used in the default prefix (*)
 #    --user ID             - Defaults to $AWS_USER_ID
 #    --access-key ID       - Defaults to $AWS_ACCESS_KEY_ID
 #    --secret-key ID       - Defaults to $AWS_SECRET_ACCESS_KEY_ID
@@ -31,7 +33,7 @@
 #    --timezone ZONE       - Defaults to UTC
 #    --locale LOCALE       - Defaults to en_US
 #    --charmap CHARMAP     - Defaults to UTF-8
-#    --size MB             - Root partition size in megabytes
+#    --size MB             - Root partition size in megabytes (*)
 #    --no-run-user-data    - Do not run user-data script on first boot
 #    --package NAME        - Additional Ubuntu package to install
 #    --script FILE         - External script/command to run before bundle
@@ -41,9 +43,10 @@
 #    --desktop nx          - Takes longer and makes AMI much bigger
 #    --rightscale          - Include RightScale integration support
 #    --builddir DIR        - Build directory [default: /mnt/build]
-#    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol
+#    --bundle-opts OPTIONS - Options to pass to ec2-bundle-vol (*)
 #    --location US/EU      - AWS location [default: US]
 #    --ec2-ami-tools-version VER - EC2 AMI tools version (e.g., "1.3.xxxxxx")
+#    --ebs                 - Build an Elastic Block Store snapshot image
 #
 #    It is ok to specify multiple --package and --script options.
 #    It is ok to specify a quoted command for the --script option.
@@ -76,6 +79,9 @@
 #   http://groups.google.com/group/ec2ubuntu
 #
 # History:
+#
+#   2009-12-29 Terry Jones <terry@jon.es>
+#   - Add support for building an EBS snapshot AMI.
 #
 #   2009-12-27 Eric Hammond <ehammond@thinksome.com>
 #   - Save .orig copy of sshd_config
@@ -156,7 +162,7 @@
 #   - Hardy and Intrepid use Ubuntu mirrors on EC2 provided by RightScale
 #   - Added support for Debian "squeeze"
 #
-#   2009-02-09 Terry Jones
+#   2009-02-09 Terry Jones <terry@jon.es>
 #   - Script hooks are run from within original directory
 #   - Non-zero exit from scripts cause failure of entire build
 #
@@ -390,6 +396,7 @@ while [ $# -gt 0 ]; do
     --bundle-opts) bundle_vol_options=$2;               shift 2 ;;
     --location)    location=$2;                         shift 2 ;;
     --ec2-ami-tools-version) tools_version=$2;          shift 2 ;;
+    --ebs)         ebs=1;                               shift ;;
     *)             echo "$0: Unrecognized option: $1" >&2; exit 1;
   esac
 done
@@ -438,20 +445,57 @@ fi
 
 # Required and default parameters
 true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
-     ${bucket:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
      ${EC2_PRIVATE_KEY:=$(echo /mnt/pk-*.pem)} \
      ${locale:=en_US} ${charmap:=UTF-8} ${timezone:=UTC} \
      ${location:=US} \
      ${tools_version:=1.3-45758} \
-     ${tag:=custom} \
-     ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)} \
      ${builddir:=/mnt/build}
 
-if [ "$codename" == "dapper" ]; then
-  true ${size:=3072}
+
+
+if [ -z "$ebs" ]
+then
+  # We must be given a bucket and we set a default prefix if we're not
+  # building an EBS snapshot AMI.
+  true ${bucket:?} \
+       ${tag:=custom} \
+       ${prefix:=$distribution-$release-$codename-$tag-$(date +%Y%m%d)}
+
+  if [ "$codename" == "dapper" ]; then
+    true ${size:=3072}
+  else
+    true ${size:=10240}
+  fi
 else
-  true ${size:=10240}
+  # It would be more compact to test all of these using eval in a loop, but
+  # then it's not so easy to give a meaningful error message showing what
+  # command line option shouldn't have been given.
+  if [ -n "$bucket" ]
+  then
+      echo >&2 "$0: --ebs is incompatible with --bucket"
+      exit 1
+  fi
+  if [ -n "$tag" ]
+  then
+      echo >&2 "$0: --ebs is incompatible with --tag"
+      exit 1
+  fi
+  if [ -n "$size" ]
+  then
+      echo >&2 "$0: --ebs is incompatible with --size"
+      exit 1
+  fi
+  if [ -n "$prefix" ]
+  then
+      echo >&2 "$0: --ebs is incompatible with --prefix"
+      exit 1
+  fi
+  if [ -n "$bundle_vol_options" ]
+  then
+      echo >&2 "$0: --ebs is incompatible with --bundle-opts"
+      exit 1
+  fi
 fi
 
 if [ "$distribution" = "ubuntu" ]; then
@@ -481,8 +525,11 @@ echo "locale:       $locale"
 echo "charmap:      $charmap"
 echo "location:     $location"
 echo "timezone:     $timezone"
-echo "image size:   ${size} MB"
-echo "uploading to: $bucket/$prefix"
+if [ -z "$ebs" ]
+then
+  echo "image size:   ${size} MB"
+  echo "uploading to: $bucket/$prefix"
+fi
 echo "bundlearch:   $bundlearch"
 echo "bsarch:       $bsarch"
 
@@ -491,11 +538,21 @@ set -x
 
 # The good stuff starts here.
 
-mkdir -p $builddir
-cd $builddir
+if [ -z "$ebs" ]
+then
+  mkdir -p $builddir
+  cd $builddir
+  imagedir=$builddir/$distribution
+  mkdir -p $imagedir
+else
+  if [ ! -d "$builddir" ]
+  then
+    echo >&2 "Build directory '$builddir' is nonexistent."
+    echo >&2 "It should be a mounted EBS volume."
+  fi
+  imagedir=$builddir
+fi
 
-imagedir=$builddir/$distribution
-mkdir -p $imagedir
 
 if which apt-get >/dev/null 2>/dev/null; then
   # Ubuntu / Debian
@@ -808,10 +865,14 @@ if [ "$desktop" = "nx" ]; then
 fi
 
 # Export build parameters so they are available in external scripts
-export distribution release codename tag bucket prefix \
-  timezone locale charmap size scripts packages modules desktop \
-  builddir imagedir bundlearch \
+export distribution release codename timezone locale charmap size \
+  scripts packages modules desktop builddir imagedir bundlearch \
   AWS_USER_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY EC2_PRIVATE_KEY EC2_CERT
+
+if [ -z "$ebs" ]
+then
+  export tag bucket prefix
+fi
 
 # Invoke external scripts/commands if requested
 export DEBIAN_FRONTEND=noninteractive
@@ -850,47 +911,84 @@ rm -rf $imagedir/usr/sbin/policy-rc.d         \
        $imagedir/root/.bash_history
 mkdir -p $imagedir/var/lib/apt/lists/partial
 
-# Bundle & upload to S3
-cp $EC2_PRIVATE_KEY $imagedir/tmp/pk.pem
-cp $EC2_CERT        $imagedir/tmp/cert.pem
 
-if [ "$kernel" ]; then
-  kernel_option="--kernel $kernel"
-fi
-if [ "$ramdisk" ]; then
-  ramdisk_option="--ramdisk $ramdisk"
-fi
+if [ -z "$ebs" ]
+then
+  # Bundle & upload to S3
+  cp $EC2_PRIVATE_KEY $imagedir/tmp/pk.pem
+  cp $EC2_CERT        $imagedir/tmp/cert.pem
 
-chroot $imagedir ec2-bundle-vol         \
-  -r $bundlearch                        \
-  $kernel_option                        \
-  $ramdisk_option                       \
-  -d /tmp                               \
-  -p $prefix                            \
-  -u $AWS_USER_ID                       \
-  -k /tmp/pk.pem                        \
-  -c /tmp/cert.pem                      \
-  -s $size                              \
-  -e /tmp                               \
-  --generate-fstab                      \
-  $bundle_vol_options
+  if [ "$kernel" ]; then
+    kernel_option="--kernel $kernel"
+  fi
+  if [ "$ramdisk" ]; then
+    ramdisk_option="--ramdisk $ramdisk"
+  fi
 
-ec2-upload-bundle                       \
-  --retry                               \
-  -b $bucket                            \
-  -m $imagedir/tmp/$prefix.manifest.xml \
-  -a $AWS_ACCESS_KEY_ID                 \
-  -s $AWS_SECRET_ACCESS_KEY             \
-  --location $location 
+  chroot $imagedir ec2-bundle-vol         \
+    -r $bundlearch                        \
+    $kernel_option                        \
+    $ramdisk_option                       \
+    -d /tmp                               \
+    -p $prefix                            \
+    -u $AWS_USER_ID                       \
+    -k /tmp/pk.pem                        \
+    -c /tmp/cert.pem                      \
+    -s $size                              \
+    -e /tmp                               \
+    --generate-fstab                      \
+    $bundle_vol_options
 
-umount $imagedir/dev/pts
-umount $imagedir/proc || true
+  ec2-upload-bundle                       \
+    --retry                               \
+    -b $bucket                            \
+    -m $imagedir/tmp/$prefix.manifest.xml \
+    -a $AWS_ACCESS_KEY_ID                 \
+    -s $AWS_SECRET_ACCESS_KEY             \
+    --location $location 
 
-set +x
-
-cat <<EOF
+  set +x
+  cat <<EOF
 
 Now you might want to run this command:
   ec2-register $bucket/$prefix.manifest.xml
 
 EOF
+else
+  fstab=$builddir/etc/fstab
+  mount_entry=`mount | grep $builddir`
+  if [ -z "$mount_entry" ]
+  then
+    echo >&2 "Could not determine $builddir file system type for $fstab"
+    echo >&2 "You'll need to manually create $fstab"
+    exit 1
+  fi
+
+  type=`echo $mount_entry | cut -f5 -d' '`
+  cat >$fstab <<EOF
+/dev/sda1 /     $type    defaults 1 1
+/dev/sda3 swap  swap    defaults 0 0
+none      /proc proc    defaults 0 0
+none      /sys  sysfs   defaults 0 0
+EOF
+
+  set +x
+  cat <<EOF
+
+You now need to:
+
+ 1. umount $builddir
+ 2. detach the EBS volume (ec2-detach-volume)
+ 3. create an EBS snapshot AMI (ec2-create-snapshot)
+ 4. (optional) delete the volume (ec2-delete-volume)
+ 5. register the snapshot as an AMI (ec2-register)
+ 6. (optional) shutdown this instance
+
+You can then use ec2-run-instances with your new AMI.
+
+EOF
+
+fi
+
+umount $imagedir/dev/pts
+umount $imagedir/proc || true
