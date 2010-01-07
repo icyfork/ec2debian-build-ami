@@ -8,10 +8,13 @@
 #   rm -f /var/ec2/ec2-run-user-data.*
 #
 # History:
+#
+#   2009-06-23 Tom White
+#   - Add support for gzip-compressed user data
+#
 #   2008-05-16 Eric Hammond <ehammond@thinksome.com>
 #   - Initial version including code from Kim Scheibel, Jorge Oliveira
 #
-
 prog=$(basename $0)
 logger="logger -t $prog"
 curl="curl --retry 3 --silent --show-error --fail"
@@ -35,6 +38,11 @@ fi
 user_data_file=$(tempfile --prefix ec2 --suffix .user-data --mode 700)
 $logger "Retrieving user-data"
 $curl -o $user_data_file $instance_data_url/user-data 2>&1 | $logger
+if [ `file -bi $user_data_file` == 'application/x-gzip' ]; then
+  $logger "User data is gzipped. Unzipping."
+  mv $user_data_file $user_data_file.gz
+  gunzip $user_data_file.gz
+fi
 if [ ! -s $user_data_file ]; then
   $logger "No user-data available"
   echo "user-data was not available" > $been_run_file
