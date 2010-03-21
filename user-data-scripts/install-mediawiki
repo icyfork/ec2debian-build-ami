@@ -12,10 +12,14 @@ set -x
 export DEBIAN_FRONTEND=noninteractive
 
 # Install packages.
-apt-get install -y mediawiki imagemagick mediawiki-math mysql-server
+sudo -E apt-get install -y mediawiki imagemagick mediawiki-math mysql-server
 
-perl -pi.bak -e 's%^#(Alias /mediawiki /var/lib/mediawiki.*)%$1%' \
-  /etc/apache2/conf.d/mediawiki*.conf
+sudo perl -pi.bak -e 's%^#(DocumentRoot )/var/www%$1/var/lib/mediawiki/%' \
+  /etc/apache2/sites-available/default
+
+# OR
+# perl -pi.bak -e 's%^#(Alias /mediawiki /var/lib/mediawiki.*)%$1%' \
+#  /etc/apache2/conf.d/mediawiki*.conf
 
 # Install Apache SSL server using a companion script.
 
