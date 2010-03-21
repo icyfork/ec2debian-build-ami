@@ -956,7 +956,7 @@ then
   cat <<EOF
 
 Now you might want to run this command:
-  ec2-register $bucket/$prefix.manifest.xml
+  ec2-register --name "$bucket/$prefix" $bucket/$prefix.manifest.xml
 
 EOF
 else
