@@ -82,6 +82,9 @@
 #
 # History:
 #
+#   2010-06-24 Shahar Evron <shahar.evron@gmail.com>
+#   - Use lazy umount to avoid "device is busy"
+#
 #   2010-01-07 Tom White
 #   - Add support for gzip-compressed user data (in ec2-run-user-data)
 #
@@ -994,5 +997,5 @@ EOF
 
 fi
 
-umount $imagedir/dev/pts
-umount $imagedir/proc || true
+umount -l $imagedir/dev/pts
+umount -l $imagedir/proc || true
