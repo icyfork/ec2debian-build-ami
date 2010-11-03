@@ -1,3 +1,9 @@
+if [ ! -f awssecret ]; then
+  echo >&2 "ERROR: missing the file 'awssecret' in current directory"
+  echo >&2 "Please create such file in Timothy Kay format."
+  exit 1
+fi
+
 export EC2_CERT=/home/pi/ec2_keys/cert-ACU6FFQI6BWLRBSSFU3QCDQVXRL5EANM.pem
 export EC2_PRIVATE_KEY=/home/pi/ec2_keys/pk-ACU6FFQI6BWLRBSSFU3QCDQVXRL5EANM.pem
 export AWS_ACCESS_KEY_ID="$(cat awssecret |sed -n 1p)"
