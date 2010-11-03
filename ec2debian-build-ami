@@ -718,7 +718,8 @@ fi
 
 # MAKEDEV is expected in /dev by some packages.
 if [ "$codename" != "karmic" ]; then
-  ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
+  [ ! -L $imagedir/dev/MAKEDEV] \
+    && ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
 fi
 
 # Upgrade/install packages
@@ -795,7 +796,9 @@ Pin: version $tools_version
 Pin-Priority: 500
 EOF
 
-ln -s /usr/lib/site_ruby/aes $imagedir/usr/local/lib/site_ruby/1.8/aes
+[ ! -L $imagedir/usr/local/lib/site_ruby/1.8/aes ] \
+  && ln -s /usr/lib/site_ruby/aes $imagedir/usr/local/lib/site_ruby/1.8/aes
+[ ! -L $imagedir/usr/local/lib/site_ruby/1.8/ec2 ] \
 ln -s /usr/lib/site_ruby/ec2 $imagedir/usr/local/lib/site_ruby/1.8/ec2
 
 # Make sure the new image doesn't try to remember a hardcoded mac address.
