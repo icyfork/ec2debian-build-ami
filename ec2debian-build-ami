@@ -662,9 +662,9 @@ echo $timezone >$imagedir/etc/timezone
 mv $imagedir/etc/apt/sources.list $imagedir/etc/apt/sources.list.orig || true
 if [ "$distribution" = "debian" ]; then
   cat <<EOF >$imagedir/etc/apt/sources.list
-deb http://http.us.debian.org/debian   $codename         main contrib non-free
-deb http://non-us.debian.org/debian-non-US stable/non-US main contrib non-free
-deb http://security.debian.org         $codename/updates main contrib non-free
+deb     http://http.us.debian.org/debian lenny           main contrib non-free
+deb     http://www.backports.org/debian  lenny-backports main contrib non-free
+deb     http://security.debian.org       lenny/updates   main contrib non-free
 EOF
 elif [ "$codename" = "hardy" -o "$codename" = "intrepid" -o "$codename" = "jaunty" ]; then
   cat <<EOF >$imagedir/etc/apt/sources.list
