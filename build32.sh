@@ -18,4 +18,5 @@ _CONFIGURE="
     --ec2-ami-tools-version 1.3-57419
     "
 
+rm -rf ./debootstrap
 $PWD/ec2debian-build-ami $_CONFIGURE
