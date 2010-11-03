@@ -3,6 +3,7 @@ source "$PWD/env.sh"
 _ARCH="${_ARCH:-i386}"
 _KERNEL="${_KERNEL:-aki-01f58a53}"
 _RAMDISK="${_RAMDISK:-ari-25f58a77}"
+_EC2_AMI_VERSION="1.3-57676"
 _CONFIGURE="
     --ebs
     --distribution debian
@@ -14,8 +15,8 @@ _CONFIGURE="
     --charmap UTF-8
     --kernel ${_KERNEL}
     --ramdisk ${_RAMDISK}
-    --builddir $PWD/build/
-    --ec2-ami-tools-version 1.3-57419
+    --builddir $PWD/build-${_ARCH}/
+    --ec2-ami-tools-version ${_EC2_AMI_VERSION}
     "
 rm -rf ./debootstrap
 $PWD/ec2debian-build-ami $_CONFIGURE
