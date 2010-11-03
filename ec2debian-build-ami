@@ -718,7 +718,7 @@ fi
 
 # MAKEDEV is expected in /dev by some packages.
 if [ "$codename" != "karmic" ]; then
-  [ ! -L $imagedir/dev/MAKEDEV] \
+  [ ! -L $imagedir/dev/MAKEDEV ] \
     && ln -s /sbin/MAKEDEV $imagedir/dev/MAKEDEV
 fi
 
