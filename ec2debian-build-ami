@@ -638,7 +638,7 @@ case "$codename" in
   hardy|intrepid|jaunty|karmic) ln -s gutsy $BSDIR/scripts/ubuntu/$codename ;;
   etch|lenny|squeeze)           ln -s sid   $BSDIR/scripts/debian/$codename ;;
 esac
-(cd $BSDIR/scripts ; ln -s */$codename $codename)
+(cd $BSDIR/scripts ; rm -f $codename; ln -s */$codename $codename)
 export DEBOOTSTRAP_DIR=$BSDIR
 #perl -pi.bak -e 'print "set -v -x\n" if $.==2' $BSDIR/debootstrap
 $BSDIR/debootstrap --arch $bsarch $codename $imagedir
@@ -663,7 +663,7 @@ mv $imagedir/etc/apt/sources.list $imagedir/etc/apt/sources.list.orig || true
 if [ "$distribution" = "debian" ]; then
   cat <<EOF >$imagedir/etc/apt/sources.list
 deb http://http.us.debian.org/debian   $codename         main contrib non-free
-#deb http://non-us.debian.org/debian-non-US stable/non-US main contrib non-free
+deb http://non-us.debian.org/debian-non-US stable/non-US main contrib non-free
 deb http://security.debian.org         $codename/updates main contrib non-free
 EOF
 elif [ "$codename" = "hardy" -o "$codename" = "intrepid" -o "$codename" = "jaunty" ]; then
