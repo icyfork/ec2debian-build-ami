@@ -1,2 +1,5 @@
-URL: http://ec2ubuntu-build-ami.notlong.com/
-URL: http://ec2ubuntu.googlecode.com/svn/trunk/bin/ec2ubuntu-build-ami
+My fork of the script 'ec2ubuntu', to build Debian AMI.
+
+Source
+  * http://ec2ubuntu-build-ami.notlong.com/
+  * http://ec2ubuntu.googlecode.com/svn/trunk/bin/ec2ubuntu-build-ami
