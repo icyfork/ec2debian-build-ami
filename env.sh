@@ -12,3 +12,7 @@ export AWS_USER_ID="858768646416"
 
 export EC2_URL="https://ec2.ap-southeast-1.amazonaws.com"
 export PATH=$PATH:$EC_HOME/bin
+
+# Build configuration
+export _PACKAGES="--package less"
+export _EC2_AMI_VERSION="1.3-57676"

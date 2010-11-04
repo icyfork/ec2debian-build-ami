@@ -3,8 +3,6 @@ source "$PWD/env.sh"
 export _ARCH="${_ARCH:-i386}"
 export _KERNEL="${_KERNEL:-aki-01f58a53}"
 export _RAMDISK="${_RAMDISK:-ari-25f58a77}"
-export _PACKAGES="$(for p in less dovecot; do echo -n " --package $p"; done)"
-export _EC2_AMI_VERSION="1.3-57676"
 export _CONFIGURE="
     --ebs
     --distribution debian

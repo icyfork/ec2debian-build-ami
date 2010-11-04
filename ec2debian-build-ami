@@ -807,10 +807,10 @@ EOF
 [ ! -L $imagedir/usr/local/lib/site_ruby/1.8/ec2 ] \
   && ln -s /usr/lib/ruby/site_ruby/ec2 $imagedir/usr/local/lib/site_ruby/1.8/ec2
 
-[ ! -L $imagedir/usr/local/lib/ruby/site_ruby/1.8/aes ] \
-  && ln -s /usr/lib/ruby/site_ruby/aes $imagedir/usr/local/lib/ruby/site_ruby/1.8/aes
-[ ! -L $imagedir/usr/local/lib/ruby/site_ruby/1.8/ec2 ] \
-  && ln -s /usr/lib/ruby/site_ruby/ec2 $imagedir/usr/local/lib/ruby/site_ruby/1.8/ec2
+#[ ! -L $imagedir/usr/local/lib/ruby/site_ruby/1.8/aes ] \
+#  && ln -s /usr/lib/ruby/site_ruby/aes $imagedir/usr/local/lib/ruby/site_ruby/1.8/aes
+#[ ! -L $imagedir/usr/local/lib/ruby/site_ruby/1.8/ec2 ] \
+#  && ln -s /usr/lib/ruby/site_ruby/ec2 $imagedir/usr/local/lib/ruby/site_ruby/1.8/ec2
 
 # Make sure the new image doesn't try to remember a hardcoded mac address.
 chroot $imagedir patch image.rb -d /usr/lib/ruby/site_ruby/ec2/platform/linux <<'EOF'
@@ -832,9 +832,11 @@ install_init(){
   curl -s -o $imagedir/etc/init.d/$script $svnpath/trunk/etc/init.d/$script
   chmod 755  $imagedir/etc/init.d/$script
   for level in $startlevels; do
+    rm -fv $imagedir/etc/rc$level.d/S$startpriority$script
     ln -s ../init.d/$script $imagedir/etc/rc$level.d/S$startpriority$script
   done
   for level in $stoplevels; do
+    rm -fv $imagedir/etc/rc$level.d/K$stoppriority$script
     ln -s ../init.d/$script $imagedir/etc/rc$level.d/K$stoppriority$script
   done
 }
