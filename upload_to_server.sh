@@ -4,4 +4,4 @@ echo >&2 "Upload scripts and keys to server (deb64, $_server_ip) to build"
 scp \
   ec2debian-build-ami \
   *.sh awssecret \
-  $_server_ip:~/$(basename $PWD)/
+  $_server_ip:~/ami/

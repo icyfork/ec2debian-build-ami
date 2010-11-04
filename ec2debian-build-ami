@@ -413,6 +413,8 @@ if [ "$codename" = "" -a "$release" = "" ]; then
   codename=hardy
 fi
 
+echo ":: Codename: $codename"
+
 if [ "$release" = "" ]; then
   case $codename in
     dapper)   release=6.06     ;;
@@ -451,6 +453,7 @@ if [ "$codename" = "sid" ]; then
   exit 1
 fi
 
+echo ":: Ensure the parameters were set"
 # Required and default parameters
 true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${EC2_CERT:=$(echo /mnt/cert-*.pem)} \
@@ -460,6 +463,7 @@ true ${AWS_USER_ID:?} ${AWS_ACCESS_KEY_ID:?} ${AWS_SECRET_ACCESS_KEY:?} \
      ${tools_version:=1.3-45758} \
      ${builddir:=/mnt/build}
 
+echo ":: Good configuration. Going to build things now"
 
 
 if [ -z "$ebs" ]
@@ -570,8 +574,8 @@ else
   yum install -y binutils
 fi
 
-# To build kernel modules yourself, see:
-# http://alestic.com/2008/05/kernel-modules-2-6-21
+echo "To build kernel modules yourself, see:"
+echo "    http://alestic.com/2008/05/kernel-modules-2-6-21"
 
 if [ ! "$kernel" -a ! "$modules" ]; then
   if [ $bsarch = 'amd64' ]; then
@@ -628,9 +632,11 @@ chmod 755 $imagedir/usr/sbin/policy-rc.d
 # Bootstrap Ubuntu
 BSURL=http://us.archive.ubuntu.com/ubuntu/pool/main/d/debootstrap
 BSVER=debootstrap_1.0.20
-BSDIR=$(pwd)/debootstrap
+BSDIR=$(pwd)/debootstrap-${_ARCH}
+# Extract and rename debootstrap
 curl -s $BSURL/$BSVER.tar.gz |
   tar xz
+mv debootstrap debootstrap-${_ARCH}
 curl -s $BSURL/${BSVER}_all.deb > /tmp/${BSVER}_all.deb
 ar p /tmp/${BSVER}_all.deb data.tar.gz |
   tar xvzOf - ./usr/share/debootstrap/devices.tar.gz > $BSDIR/devices.tar.gz
@@ -797,25 +803,23 @@ Pin-Priority: 500
 EOF
 
 [ ! -L $imagedir/usr/local/lib/site_ruby/1.8/aes ] \
-  && ln -s /usr/lib/site_ruby/aes $imagedir/usr/local/lib/site_ruby/1.8/aes
+  && ln -s /usr/lib/ruby/site_ruby/aes $imagedir/usr/local/lib/site_ruby/1.8/aes
 [ ! -L $imagedir/usr/local/lib/site_ruby/1.8/ec2 ] \
-  && ln -s /usr/lib/site_ruby/ec2 $imagedir/usr/local/lib/site_ruby/1.8/ec2
+  && ln -s /usr/lib/ruby/site_ruby/ec2 $imagedir/usr/local/lib/site_ruby/1.8/ec2
+
+[ ! -L $imagedir/usr/local/lib/ruby/site_ruby/1.8/aes ] \
+  && ln -s /usr/lib/ruby/site_ruby/aes $imagedir/usr/local/lib/ruby/site_ruby/1.8/aes
+[ ! -L $imagedir/usr/local/lib/ruby/site_ruby/1.8/ec2 ] \
+  && ln -s /usr/lib/ruby/site_ruby/ec2 $imagedir/usr/local/lib/ruby/site_ruby/1.8/ec2
 
 # Make sure the new image doesn't try to remember a hardcoded mac address.
-chroot $imagedir patch -d /usr/lib/site_ruby/ec2/platform/linux <<'EOF'
---- image.rb.orig	2008-11-27 04:58:36.964214178 -0800
-+++ image.rb	2008-11-27 05:00:25.095464580 -0800
-@@ -26,7 +26,9 @@
-       # Symbolic links are preserved.
-       class Image
-         IMG_MNT = '/mnt/img-mnt'
--        EXCLUDES= ['/dev', '/media', '/mnt', '/proc', '/sys']
-+        EXCLUDES= ['/dev', '/media', '/mnt', '/proc', '/sys',
-+                   '/etc/udev/rules.d/70-persistent-net.rules',
-+                   '/etc/udev/rules.d/z25_persistent-net.rules' ]
-         DEFAULT_FSTAB = EC2::Platform::Linux::Fstab::DEFAULT
-         LEGACY_FSTAB  = EC2::Platform::Linux::Fstab::LEGACY
-
+chroot $imagedir patch image.rb -d /usr/lib/ruby/site_ruby/ec2/platform/linux <<'EOF'
+29c29,31
+<         EXCLUDES= ['/dev', '/media', '/mnt', '/proc', '/sys']
+---
+>         EXCLUDES= ['/dev', '/media', '/mnt', '/proc', '/sys',
+>                    '/etc/udev/rules.d/70-persistent-net.rules',
+>                    '/etc/udev/rules.d/z25_persistent-net.rules' ]
 EOF
 
 # Download and install startup scripts.
@@ -923,6 +927,7 @@ rm -rf $imagedir/usr/sbin/policy-rc.d         \
        $imagedir/root/.bash_history
 mkdir -p $imagedir/var/lib/apt/lists/partial
 
+echo ":: Last steps: upload the bundle (S3) and/or create snapshot volume"
 
 if [ -z "$ebs" ]
 then
