@@ -3,3 +3,11 @@ My fork of the script 'ec2ubuntu', to build Debian AMI.
 Source
   * http://ec2ubuntu-build-ami.notlong.com/
   * http://ec2ubuntu.googlecode.com/svn/trunk/bin/ec2ubuntu-build-ami
+
+Notes
+
+  Modules
+    64bit:
+      http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen-ec2-x86_64-20090930.tar.gz
+    32bit:
+      http://alestic-downloads.s3.amazonaws.com/ec2-kernel-modules-2.6.21.7-2.fc8xen-ec2-i686-20090930.tar.gz

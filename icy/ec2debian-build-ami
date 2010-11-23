@@ -763,7 +763,10 @@ if [ "$desktop" ]; then
 else
   perl -pi.orig -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
     $imagedir/etc/ssh/sshd_config
-  echo "Port 57557" >> $imagedir/etc/ssh/sshd_config
+  grep -q '^ Port 57557' $imagedir/etc/ssh/sshd_config
+  if [ $? -ge 1 ]; then
+    echo "Port 57557" >> $imagedir/etc/ssh/sshd_config
+  fi
 fi
 
 # Basic networking
